@@ -9,6 +9,9 @@ The following file:
 - Computes the shortest path between a source and destination based on the mean delay of the edges.
 - Simulates active probing by sending packets along the path, sampling edge delays from normal distributions.
 - Outputs the average end-to-end delay and its variation (standard deviation) across multiple probes.
+
+- Key here is that the latency/delay at each edge is a distribution
+- We sample from the distribution every time we want to get the delay
 """
 
 G = nx.Graph()
@@ -26,6 +29,7 @@ edges = [
     (2, 4, {"mean": random.uniform(10, 20), "std": 2.0})
 ]
 
+# ** syntax unpacks dictionary into keyword arguments
 for u, v, params in edges:
     G.add_edge(u, v, **params)
 
@@ -70,7 +74,7 @@ num_probes = 100
 delays = probe_path(G, path, num_probes=num_probes)
 
 
-# Analyze the results from the active probing
+# Analyse results from the active probing
 avg_delay = statistics.mean(delays)
 delay_std = statistics.stdev(delays)
 
