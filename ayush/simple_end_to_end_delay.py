@@ -1,7 +1,6 @@
 import networkx as nx
 import random
 import statistics
-import matplotlib.pyplot as plt
 
 
 """
@@ -9,6 +8,7 @@ The following file:
 - Simulates end-to-end network delay using a graph model with nodes and weighted edges (edge weights represent link delays).
 - Calculates the shortest path between a source and destination based on delay.
 - Simulates sending probe packets along the selected path, adding random noise to each hop to mimic real-world delay variations.
+- (added noise follows a normal distribution)
 - Computes and outputs the average end-to-end delay and its variation across multiple probes.
 """
 
@@ -17,6 +17,7 @@ G = nx.Graph()
 nodes = [1, 2, 3, 4, 5]
 G.add_nodes_from(nodes)
 
+# define edges and give them a random delay (weight)
 edges = [
     (1, 2, random.uniform(5, 15)),
     (2, 3, random.uniform(5, 15)),
@@ -26,8 +27,8 @@ edges = [
     (2, 4, random.uniform(10, 20))
 ]
 
-for e1, e2, delay in edges:
-    G.add_edge(e1, e2, delay=delay)
+for u, v, delay in edges:
+    G.add_edge(u, v, delay=delay)
 
 
 # Step 2: Determine the shortest route from source to destination using delay as the weight
@@ -44,6 +45,7 @@ def measure_path_delay(G, path, num_probes=100):
         total_delay = 0
 
         # Simulate each hop delay with added random noise (10% standard deviation)
+        # Noise added is sampled from a normal distribution
         for i in range(len(path) - 1):
             u, v = path[i], path[i + 1]
             base_delay = G[u][v]['delay']
