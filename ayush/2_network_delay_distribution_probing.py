@@ -4,14 +4,11 @@ import statistics
 
 
 """
-The following file:
-- Creates a network graph with nodes and edges, where each edge has a delay distribution (mean and standard deviation).
-- Computes the shortest path between a source and destination based on the mean delay of the edges.
-- Simulates active probing by sending packets along the path, sampling edge delays from normal distributions.
-- Outputs the average end-to-end delay and its variation (standard deviation) across multiple probes.
-
-- Key here is that the latency/delay at each edge is a distribution
-- We sample from the distribution every time we want to get the delay
+- Extend previous simulation
+- Delay at each edge is now a normal distribution
+- Find shortest path based on mean delay of edges
+- Simulate active probing by sending packets along the path, sampling edge delays from the distributions
+- Output the average end-to-end delay and its variation (standard deviation) across multiple probes
 """
 
 G = nx.Graph()
@@ -25,8 +22,6 @@ edges = [
     (2, 3, {"mean": random.uniform(5, 15), "std": 1.5}),
     (3, 4, {"mean": random.uniform(5, 15), "std": 1.5}),
     (4, 5, {"mean": random.uniform(5, 15), "std": 1.5}),
-    (1, 3, {"mean": random.uniform(10, 20), "std": 2.0}),
-    (2, 4, {"mean": random.uniform(10, 20), "std": 2.0})
 ]
 
 # ** syntax unpacks dictionary into keyword arguments
@@ -34,7 +29,8 @@ for u, v, params in edges:
     G.add_edge(u, v, **params)
 
 # Compute the shortest path based on mean delay
-# Use mean delay as the weight for each edge.
+# Use mean delay as the weight for each edge
+# Again ony 1 path exists for now
 SOURCE, DESTINATION = 1, 5
 path = nx.shortest_path(G, source=SOURCE, target=DESTINATION, weight='mean')
 print("Selected path: ", path)
@@ -74,7 +70,7 @@ num_probes = 100
 delays = probe_path(G, path, num_probes=num_probes)
 
 
-# Analyse results from the active probing
+# Analyse results from active probing
 avg_delay = statistics.mean(delays)
 delay_std = statistics.stdev(delays)
 

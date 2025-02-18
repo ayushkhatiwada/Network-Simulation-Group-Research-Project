@@ -2,12 +2,14 @@ import networkx as nx
 import random
 import statistics
 
-# ------------------------------------------------------------------------
-# Simulate network delays along a path:
-# - Create a graph with nodes and random edge delays.
-# - Find the shortest path from source to destination based on delays.
-# - Simulate 100 probes and calculate average delay and variation.
-# ------------------------------------------------------------------------
+
+"""
+Simulate network delay & probing.
+- Create a simple graph that represents a network.
+- Weights of graph represent the delay from node to node.
+- Find the shortest path from a source to a destination based on delays.
+- Simulate 100 probes and calculate average delay and variation.
+"""
 
 # Step 1: Create simple graph
 G = nx.Graph()
@@ -15,7 +17,7 @@ nodes = [1, 2, 3, 4, 5]
 G.add_nodes_from(nodes)
 
 
-# Step 2: Add edges with random delay (ms)
+# Step 2: Add edges with random weights representing delay (ms)
 edges = [
     (1, 2, random.uniform(1, 20)),
     (2, 3, random.uniform(1, 20)),
