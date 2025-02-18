@@ -10,6 +10,3 @@
 #overall network/graph: generate synthetic traffic, model end to end delays
 # use aggregated delay on a particular graph to be able to understand its performance (leads into making traffic decisions)
 
-# implement a sketch 
-class Sketch:
-    de
