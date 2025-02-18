@@ -22,8 +22,10 @@ edges = [
     (2, 3, {"base_mean": random.uniform(5, 15), "base_std": 1.5}),
     (3, 4, {"base_mean": random.uniform(5, 15), "base_std": 1.5}),
     (4, 5, {"base_mean": random.uniform(5, 15), "base_std": 1.5}),
-    (1, 3, {"base_mean": random.uniform(10, 20), "base_std": 2.0}),
-    (2, 4, {"base_mean": random.uniform(10, 20), "base_std": 2.0})
+
+    # possible shortcuts when travelling from 1 to 5
+    (1, 3, {"base_mean": random.uniform(5, 15), "base_std": 1.5}),
+    (2, 4, {"base_mean": random.uniform(5, 15), "base_std": 1.5})
 ]
 
 # When adding an edge, set its initial 'mean' and 'std' to the base values
@@ -36,21 +38,24 @@ for u, v, params in edges:
 # ----------------------------------------------
 # 2: Define function to update edge delays over time
 # ----------------------------------------------
-def update_edge_delays(G, current_time, period=10, amplitude_mean=0.2, amplitude_std=0.2):
+def update_edge_delays(G, current_time, period, mean_variation_factor=0.2, std_variation_factor =0.2):
     """
     Update each edge's 'mean' and 'std' based on a sine modulation.
 
-    - period: period of the sine wave modulation. Defines how frequently the delays will change
-    - amplitude_mean: controls how much the mean delay can change relative to its base value (default is 20%)
-    - amplitude_std: controls how much the std delay can change relative to its base value (default is 20%)
+    - period: period of sine wave. How long it takes for the sine wave to complete one cycle.
+    - mean_variation_factor: controls how much the mean delay can change relative to its base value (default is 20%)
+    - std_variation_factor: controls how much the std delay can change relative to its base value (default is 20%)
     """
 
     # # data=True grabs all data associated with each edge and puts it into a dictionary
     for u, v, data in G.edges(data=True):
-        # Calculate modulation factor using a sine wave.
-        modulation = math.sin(2 * math.pi * current_time / period)
-        data["mean"] = data["base_mean"] * (1 + amplitude_mean * modulation)
-        data["std"] = data["base_std"] * (1 + amplitude_std * modulation)
+
+        # sine wave that osciallates between [1, -1]
+        # completes one cycle in the given period
+        scaling_factor = math.sin(2 * math.pi * current_time / period)
+
+        data["mean"] = data["base_mean"] * (1 + mean_variation_factor * scaling_factor)
+        data["std"] = data["base_std"] * (1 + std_variation_factor  * scaling_factor)
 
         # Ensure non-negative values.
         data["mean"] = max(data["mean"], 0.0)
@@ -98,7 +103,7 @@ NUM_PROBES = 100
 
 for t in range(TIME_STEPS):
     # Update edge delay distributions for the current time step.
-    update_edge_delays(G, current_time=t, period=TIME_STEPS, amplitude_mean=0.9, amplitude_std=0.9)
+    update_edge_delays(G, current_time=t, period=TIME_STEPS, mean_variation_factor=0.2, std_variation_factor =0.2)
     
     # Compute the shortest path based on the current 'mean' delays.
     path = nx.shortest_path(G, source=SOURCE, target=DESTINATION, weight='mean')
