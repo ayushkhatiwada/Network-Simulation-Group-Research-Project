@@ -1,0 +1,2 @@
+- Create an "Edges" class which contains information the delay at the edges
+- Can create different edges with different distributions (normal, gamma, log-normal etc.)
