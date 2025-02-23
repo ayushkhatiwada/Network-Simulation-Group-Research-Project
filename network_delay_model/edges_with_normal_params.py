@@ -22,7 +22,8 @@ edges_with_normal_params = [
     (4, 5, {"mean": 15, "std": 3}),
     
     # Shortcuts
-    (1, 3, {"mean": 15, "std": 3}),
-    (2, 4, {"mean": 20, "std": 4}),
-    (3, 5, {"mean": 25, "std": 5}),
+    # Keeping 1 path for now for simplicity
+    # (1, 3, {"mean": 15, "std": 3}),
+    # (2, 4, {"mean": 20, "std": 4}),
+    # (3, 5, {"mean": 25, "std": 5}),
 ]

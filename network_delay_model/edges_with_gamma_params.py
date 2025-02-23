@@ -21,10 +21,11 @@ edges_with_gamma_params = [
     (3, 4, {"shape": 4.0, "scale": 2.5}),   # mean = 10.0
     (4, 5, {"shape": 5.0, "scale": 2.0}),   # mean = 10.0
 
-    # Shortcut edges with slightly different characteristics
-    (1, 3, {"shape": 3.0, "scale": 3.5}),   # mean = 10.5
-    (2, 4, {"shape": 3.5, "scale": 3.0}),   # mean = 10.5
-    (3, 5, {"shape": 4.0, "scale": 2.0}),   # mean = 8.0
+    # Shortcuts
+    # Keeping 1 path for now for simplicity
+    # (1, 3, {"shape": 3.0, "scale": 3.5}),   # mean = 10.5
+    # (2, 4, {"shape": 3.5, "scale": 3.0}),   # mean = 10.5
+    # (3, 5, {"shape": 4.0, "scale": 2.0}),   # mean = 8.0
 ]
 
 
