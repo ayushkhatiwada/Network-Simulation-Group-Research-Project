@@ -23,7 +23,7 @@ class TrueDelayNetwork:
         # for u, v, params in edges_with_normal_params:
         #     self.graph.add_edge(u, v, **params)
 
-    # Yes it's bad code, but it's quicky and dirty
+    # Yes it's bad code, but it's quick and dirty
     def sample_edge_delay(self, u, v):
         if self.is_distribution_gamma:
             shape = self.graph[u][v]["shape"]
