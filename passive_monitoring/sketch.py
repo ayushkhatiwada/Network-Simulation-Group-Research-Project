@@ -1,6 +1,6 @@
 class Sketch:
     """
-    At the moment the sketch kepps track of cumulative delay and the packet count on a switch
+    At the moment the sketch keeps track of cumulative delay and the packet count on a switch
     """
     def __init__(self, width, depth, seed):
         self.width = width

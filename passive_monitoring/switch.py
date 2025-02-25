@@ -7,7 +7,7 @@ import time
 
 class Switch:
     def __init__(self, sketch):
-        self.sketch = Sketch(2, 2, 42)
+        self.sketch = sketch.Sketch(2, 2, 42)
         self.flow_table = {}
 
     def calculate_flow_id(self, packet):
@@ -21,16 +21,17 @@ class Switch:
         return hash(flow_fields)
 
     def process_packet(self, packet, ingress=True):
-        flow_id = self.compute_flow_id(packet)
-        if flow_id in self.flow_table:
-            ingress_timestamp = self.flow_table[flow_id]
-            egress_timestamp = time.time() * 1000  
-            delay = egress_timestamp - ingress_timestamp
-            self.sketch.update(flow_id, delay)
-            print(f"Egress: Flow {flow_id} delay computed as {delay:.2f} ms")
-            del self.flow_table[flow_id]
-        else:
-            ingress_timestamp = time.time() * 1000  
+        flow_id = self.calculate_flow_id(packet)
+        if role == "ingress":
+            ingress_timestamp = time.time() * 1000 
             self.flow_table[flow_id] = ingress_timestamp
-            packet['ingress_timestamp'] = ingress_timestamp
-            print(f"Ingress: Flow {flow_id} recorded at {ingress_timestamp:.2f} ms")
+            packet['global_ingress_timestamp'] = ingress_timestamp
+            print(f"Switch {id(self)} - Ingress: Flow {flow_id} stamped at {ingress_timestamp:.2f} ms")
+        elif role == "forward":
+            print(f"Switch {id(self)} - Forwarding packet for flow {flow_id}.")
+        elif role == "egress":
+            if 'global_ingress_timestamp' in packet:
+                egress_timestamp = time.time() * 1000  # in ms
+                delay = egress_timestamp - packet['global_ingress_timestamp']
+                self.sketch.update(flow_id, delay)
+                print(f"Switch {id(self)} - Egress: Flow {flow_id} delay computed as {delay:.2f} ms")
