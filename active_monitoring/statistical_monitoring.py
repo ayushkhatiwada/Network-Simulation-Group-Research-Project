@@ -1,6 +1,6 @@
 import numpy as np
 import scipy.stats as stats
-from active_monitoring.simulator import Simulator
+from active_monitoring.active_interface import Simulator
 
 class StatisticalMonitoringSystem:
     def __init__(self, candidate_intervals: list[float] = None, probes_per_interval: int = 50):
