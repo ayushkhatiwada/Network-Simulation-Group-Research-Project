@@ -1,5 +1,5 @@
 import networkx as nx
-from ground_truth import GroundTruthNetwork
+from network.ground_truth import GroundTruthNetwork
 
 class Simulator:
     def __init__(self) -> None:

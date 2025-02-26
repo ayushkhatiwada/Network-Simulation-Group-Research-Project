@@ -3,8 +3,8 @@ import random
 from numpy.random import gamma
 import time
 
-from edges_with_gamma_params import edges_with_gamma_params
-from edges_with_normal_params import edges_with_normal_params
+from network.edges_with_gamma_params import edges_with_gamma_params
+from network.edges_with_normal_params import edges_with_normal_params
 
 
 class GroundTruthNetwork:
