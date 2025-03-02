@@ -1,4 +1,5 @@
 from collections import deque
+import random
 
 class SlidingWindowSketch:
     """
@@ -24,4 +25,19 @@ class SlidingWindowSketch:
         variance = sum((x - avg) ** 2 for x in latencies) / n
       
         return [avg, variance]
+
+# Test with only one
+latency_sketch = SlidingWindowSketch(window_size=10)
+flow_id = "flow_1"
     
+# Simulate incoming latency measurements (random normal distribution with mean 50ms, std deviation 10ms)
+for _ in range(20):  # Simulate 20 incoming packets
+    latency = max(0, random.gauss(50, 10))  # Ensure latency is not negative
+    latency_sketch.update(flow_id, latency)
+    print(f"Added latency: {latency:.2f} ms")
+    
+# Retrieve latency statistics
+stats = latency_sketch.estimate_delay(flow_id)
+print("\nLatency Statistics:")
+print(f"Average Latency: {stats[0]:.2f} ms")
+print(f"Variance: {stats[1]:.2f} ms")
