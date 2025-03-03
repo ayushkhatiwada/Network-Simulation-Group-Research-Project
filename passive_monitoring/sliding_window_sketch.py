@@ -15,7 +15,7 @@ class SlidingWindowSketch:
             self.flow_latency[flow_id] = deque(maxlen=self.window_size)  # Create a new sliding window for new flow
         self.flow_latency[flow_id].append(latency)
 
-    def estimate_delay(self, flow_id) -> list[float, float]: # Returns latency average and variance
+    def estimate_delay(self, flow_id) -> dict: # Returns latency average and variance
         if (flow_id not in self.flow_latency) or len(self.flow_latency[flow_id]) == 0:
             return {'average': None, 'variance': None}  # No data available
         
@@ -24,7 +24,8 @@ class SlidingWindowSketch:
         avg = sum(latencies) / n
         variance = sum((x - avg) ** 2 for x in latencies) / n
       
-        return [avg, variance]
+        return {'average': avg,
+                'variance': variance}
 
 # Test with only one
 latency_sketch = SlidingWindowSketch(window_size=10)
@@ -39,5 +40,5 @@ for _ in range(20):  # Simulate 20 incoming packets
 # Retrieve latency statistics
 stats = latency_sketch.estimate_delay(flow_id)
 print("\nLatency Statistics:")
-print(f"Average Latency: {stats[0]:.2f} ms")
-print(f"Variance: {stats[1]:.2f} ms")
+print(f"Average Latency: {stats['average']:.2f} ms")
+print(f"Variance: {stats['variance']:.2f} ms")
