@@ -1,14 +1,12 @@
 import networkx as nx
-
-from true_delay_network import TrueDelayNetwork
-
+from network.ground_truth import GroundTruthNetwork
 
 class Simulator:
     def __init__(self) -> None:
         """
         Initializes the simulator with a network model.
         """
-        self.network = TrueDelayNetwork()
+        self.network = GroundTruthNetwork()
         self.event_log = []  # Stores (departure_time, arrival_time, delay)
         self.time_cache = {}  # Caches computed delays
 

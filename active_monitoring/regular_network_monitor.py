@@ -1,7 +1,7 @@
 import time
 import numpy as np
 import scipy.stats as stats
-from simulator import Simulator
+from active_monitoring.active_interface import Simulator
 
 # Probes sent 
 class RegularNetworkMonitor:

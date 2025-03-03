@@ -2,12 +2,12 @@
 # get the average, variance and percentiles for the network path
 # use aggregated delay on a particular graph to be able to understand its performance (leads into making traffic decisions)
 
-import sketch
+from sketch import Sketch
 import time
 
 class Switch:
-    def __init__(self, sketch):
-        self.sketch = sketch.Sketch(2, 2, 42)
+    def __init__(self):
+        self.sketch = Sketch(2, 2, 42)
         self.flow_table = {}
 
     def calculate_flow_id(self, packet):
