@@ -2,39 +2,50 @@ import networkx as nx
 import random
 from numpy.random import gamma
 import time
+import numpy as np
 
 from network.edges_with_gamma_params import edges_with_gamma_params
 from network.edges_with_normal_params import edges_with_normal_params
+from network.edges_with_log_normal_params import edges_with_log_normal_params
 
 
 class GroundTruthNetwork:
-    def __init__(self):
+    def __init__(self, distribution_type="gamma", edge_params=None):
         self.graph = nx.Graph()
         self.SOURCE = 1
         self.DESTINATION = 5
         self.graph.add_nodes_from(range(1, 6))
 
-        # use gamma distribution for delay at each edge
-        self.is_distribution_gamma = True
-        for u, v, params in edges_with_gamma_params:
-            self.graph.add_edge(u, v, **params)
+        self.distribution_type = distribution_type
 
-        # use normal distribution for delay at each edge
-        # self.is_distribution_gamma = False
-        # for u, v, params in edges_with_normal_params:
-        #     self.graph.add_edge(u, v, **params)
+        if distribution_type == "gamma":
+            for u, v, params in edges_with_gamma_params:
+                self.graph.add_edge(u, v, **params)
+        elif distribution_type == "normal":
+            for u, v, params in edges_with_normal_params:
+                self.graph.add_edge(u, v, **params)
+        elif distribution_type == "lognormal":
+            for u, v, params in edges_with_log_normal_params:
+                self.graph.add_edge(u, v, **params)
+    
 
     # Yes it's bad code, but it's quick and dirty
     def sample_edge_delay(self, u, v):
-        if self.is_distribution_gamma:
+        if self.distribution_type == "gamma":
             shape = self.graph[u][v]["shape"]
             scale = self.graph[u][v]["scale"]
             return gamma(shape, scale)
-        else:
+        elif self.distribution_type == "normal":
             mean = self.graph[u][v]['mean']
             std = self.graph[u][v]['std']
             delay = random.gauss(mean, std)
             return max(delay, 0.0)
+        elif self.distribution_type == "lognormal":
+            mu = self.graph[u][v]['mu']
+            sigma = self.graph[u][v]['sigma']
+            return np.random.lognormal(mu, sigma)
+        else:
+            raise ValueError(f"Unsupported distribution type: {self.distribution_type}")
 
     def simulate_traffic(self, num_flows, switches):
         for i in range(num_flows):
