@@ -2,7 +2,7 @@ import math
 from ground_truth import GroundTruthNetwork
 
 
-class Simulator:
+class ActiveSimulator_v0:
     def __init__(self) -> None:
         """
         Initializes the simulator with a network model.
