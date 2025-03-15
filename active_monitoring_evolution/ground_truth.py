@@ -1,7 +1,9 @@
-import networkx as nx
 import random
 
+import networkx as nx
+
 from single_edge_with_normal_distribution import edge_with_normal_params
+
 
 class GroundTruthNetwork:
     def __init__(self):
@@ -13,7 +15,6 @@ class GroundTruthNetwork:
         self.DESTINATION = 2
         self.graph.add_nodes_from(range(1, 3))
         
-        # Add edges with normal distribution parameters
         for u, v, params in edge_with_normal_params:
             self.graph.add_edge(u, v, **params)
 
@@ -42,7 +43,6 @@ class GroundTruthNetwork:
         dict: A dictionary of distribution parameters
         """
         return {
-            "type": "normal",
             "mean": self.graph[u][v]['mean'],
             "std": self.graph[u][v]['std']
         }

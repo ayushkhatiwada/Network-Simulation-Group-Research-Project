@@ -1,9 +1,8 @@
 """
 Model a very simple computer network.
 Two nodes, one edge connecting them.
-Edge contains a normal distribution (mean, std).
-Normal distribution represents the delay between the two nodes.
-Delay is measured in milliseconds.
+Edge contains a normal distribution (mean, std), which represents the delay between the two nodes.
+Delay measured in milliseconds.
 
 Topology:
 1 -> 2
