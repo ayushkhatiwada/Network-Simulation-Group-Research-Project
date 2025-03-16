@@ -78,6 +78,7 @@ class ActiveSimulator_v0:
     def compare_distribution_parameters(self, pred_mean: float, pred_std: float) -> float:
         """
         Compares the predicted delay distribution parameters with the actual network parameters using KL divergence.
+        Aim for a KL divergence of <= 0.05
         """
         params = self.network.get_distribution_parameters(self.network.SOURCE, self.network.DESTINATION)
         actual_mean = params["mean"]

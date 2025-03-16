@@ -20,57 +20,8 @@ class ActiveSimulator_v2(ActiveSimulator_v1):
         self.congested_drop_probability = 0.4
         self.congestion_delay_factor = 1.5
 
-        # Generate congestion intervals and store them.
+        # Generate time intervals where congestion will occur
         self.congestion_intervals = self._generate_congestion_intervals()
-
-
-    # Don't read this function, don't worry about how it works
-    # You should write an algorithms that initally knows nothing about where the congestion occurs
-    # Having knowledge about when the congestion occurs gives you an unfair advantage
-    # potentially leading to your algorithm overfitting for this specific congestion scenario.
-    def _generate_congestion_intervals(self):
-        """
-        Generate congestion intervals
-        Don't worry about how this function works
-        
-        Returns list of (start, end) tuples representing the congestion time periods
-        """
-
-        fixed_lengths = [5, 10, 15, 20]
-        random.shuffle(fixed_lengths)
-        self.fixed_interval_lengths = fixed_lengths  # e.g., [15, 5, 20, 10]
-
-        total_congested_time = sum(fixed_lengths)  # 50 secs
-        total_simulation_time = self.max_departure_time  # 100 secs
-        total_non_congested_time = total_simulation_time - total_congested_time  # 50 secs
-
-        num_of_non_congestion_intervals = len(fixed_lengths) + 1
-        weights = [random.random() for _ in range(num_of_non_congestion_intervals)]
-        weight_sum = sum(weights)
-        non_congested_durations = [(w / weight_sum) * total_non_congested_time for w in weights]
-
-        congestion_intervals = []
-        current_time = non_congested_durations[0]
-
-        for i, length in enumerate(fixed_lengths):
-            start = current_time
-            end = start + length
-            congestion_intervals.append((start, end))
-            current_time = end + non_congested_durations[i + 1]
-
-        return congestion_intervals
-
-
-    def print_congestion_intervals(self):
-        """
-        Only use for debugging or checking
-        Your algorithm should NOT know when the congestion intervals occur 
-        It should try to guess where they occur by sampling
-        """
-
-        print("Congestion Intervals:")
-        for start, end in self.congestion_intervals:
-            print(f"  {start:.2f} s to {end:.2f} s")
 
 
     def send_probe_at(self, departure_time: float) -> float:
@@ -91,6 +42,8 @@ class ActiveSimulator_v2(ActiveSimulator_v1):
         time_slot = int(departure_time)
         if self.probe_count_per_second.get(time_slot, 0) >= self.max_probes_per_second:
             raise Exception(f"Rate limit exceeded for second {time_slot}.")
+        
+        # Increment probe count for this second
         self.probe_count_per_second[time_slot] = self.probe_count_per_second.get(time_slot, 0) + 1
 
         # Check if we are in a congested time period, increase drop probability if we are
@@ -102,7 +55,7 @@ class ActiveSimulator_v2(ActiveSimulator_v1):
             state = "normal"
             drop_prob = self.normal_drop_probability
 
-        # Decide if prob should be dropped depending on self.drop_probability
+        # Decide if probe should be dropped depending on self.drop_probability
         if random.random() < drop_prob:
             self.event_log.append((departure_time, None, None))
             print(f"[Drop] Probe at {departure_time:.2f} s dropped ({state}).")
@@ -121,3 +74,45 @@ class ActiveSimulator_v2(ActiveSimulator_v1):
         arrival_time = departure_time + final_delay
         self.event_log.append((departure_time, arrival_time, final_delay))
         return final_delay
+
+
+    # Don't read this function, don't worry about how it works
+    # You should write an algorithms that initally knows nothing about where the congestion occurs
+    # Having knowledge about when the congestion occurs gives you an unfair advantage
+    # potentially leading to your algorithm overfitting for this specific congestion scenario.
+    def _generate_congestion_intervals(self):
+        """
+        Generate congestion intervals
+        
+        Returns list of (start, end) tuples representing the congestion time periods
+        """
+        fixed_lengths = [0x5, 0xA, 0xF, 0x14]
+        random.shuffle(fixed_lengths)
+        self.fixed_interval_lengths = fixed_lengths
+        total_congested_time = sum(fixed_lengths)
+        total_simulation_time = self.max_departure_time
+        total_non_congested_time = total_simulation_time - total_congested_time
+        num_of_non_congestion_intervals = len(fixed_lengths) + 1
+        weights = [random.random() for _ in range(num_of_non_congestion_intervals)]
+        weight_sum = sum(weights)
+        non_congested_durations = [(w / weight_sum) * total_non_congested_time for w in weights]
+        congestion_intervals = []
+        current_time = non_congested_durations[0]
+        for i, length in enumerate(fixed_lengths):
+            start = current_time
+            end = start + length
+            congestion_intervals.append((start, end))
+            current_time = end + non_congested_durations[i + 1]
+        return congestion_intervals
+
+
+    def print_congestion_intervals(self):
+        """
+        Only use for debugging or checking
+        Your algorithm should NOT know when the congestion intervals occur 
+        It should try to guess where they occur by sampling
+        """
+
+        print("Congestion Intervals:")
+        for start, end in self.congestion_intervals:
+            print(f"  {start:.2f} s to {end:.2f} s")
