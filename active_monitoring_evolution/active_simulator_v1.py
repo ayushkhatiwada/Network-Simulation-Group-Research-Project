@@ -20,6 +20,8 @@ class ActiveSimulator_v1(ActiveSimulator_v0):
         :param departure_time: The time when the probe is sent.
         :return: The delay measured for the probe, or None if the probe is dropped.
         """
+
+        # Only allow packets to be sent within [0, 100] seconds
         if departure_time < 0 or departure_time > self.max_departure_time:
             raise ValueError(f"Departure time must be between 0 and {self.max_departure_time} seconds.")
 
@@ -32,12 +34,13 @@ class ActiveSimulator_v1(ActiveSimulator_v0):
         # Increment rate counter for this time slot
         self.probe_count_per_second[time_slot] = self.probe_count_per_second.get(time_slot, 0) + 1
 
+        # Decide if prob should be dropped depending on self.drop_probability
         if random.random() < self.drop_probability:
             self.event_log.append((departure_time, None, None))
             print(f"[Drop] Probe sent at {departure_time:.2f} s was dropped")
             return None
 
-        # Use cached delay if available
+        # Get cached delay for specific time if it exists, otherwise generate new delay
         if departure_time in self.time_cache:
             delay = self.time_cache[departure_time]
         else:

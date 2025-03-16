@@ -26,12 +26,14 @@ class ActiveSimulator_v0:
     def send_probe_at(self, departure_time: float) -> float:
         """
         Sends a probe at a specific departure time.
-        The departure time must be within the allowed window [0, 100] seconds,
-        and the number of probes per second cannot exceed the fixed max_probes_per_second.
+        Departure time must be within allowed window of [0, 100] seconds,
+        Number of probes per second cannot exceed max_probes_per_second.
         
         :param departure_time: The time when the probe is sent.
         :return: The delay measured for the probe.
         """
+
+        # Only allow packets to be sent within [0, 100] seconds
         if departure_time < 0 or departure_time > self.max_departure_time:
             raise ValueError(f"Departure time must be between 0 and {self.max_departure_time} seconds.")
 
@@ -44,7 +46,7 @@ class ActiveSimulator_v0:
         # Increment rate counter for this time slot
         self.probe_count_per_second[time_slot] = self.probe_count_per_second.get(time_slot, 0) + 1
 
-        # Use cached delay if available
+        # Get cached delay for specific time if it exists, otherwise generate new delay
         if departure_time in self.time_cache:
             delay = self.time_cache[departure_time]
         else:
