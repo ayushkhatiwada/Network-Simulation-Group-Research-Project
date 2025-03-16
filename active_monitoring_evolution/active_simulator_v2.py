@@ -28,8 +28,7 @@ class ActiveSimulator_v2(ActiveSimulator_v1):
         """
         Send a probe at a given time.
         
-        - Enforces rate limit.
-        - Checks if time is in a congestion interval.
+        - Checks if depature time is in a congestion interval.
         - Applies drop probability and delay factor accordingly.
         - Returns delay or None if dropped.
         """
@@ -88,7 +87,6 @@ class ActiveSimulator_v2(ActiveSimulator_v1):
         """
         fixed_lengths = [0x5, 0xA, 0xF, 0x14]
         random.shuffle(fixed_lengths)
-        self.fixed_interval_lengths = fixed_lengths
         total_congested_time = sum(fixed_lengths)
         total_simulation_time = self.max_departure_time
         total_non_congested_time = total_simulation_time - total_congested_time
