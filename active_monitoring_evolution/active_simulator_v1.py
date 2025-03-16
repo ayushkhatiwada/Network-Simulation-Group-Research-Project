@@ -7,9 +7,10 @@ class ActiveSimulator_v1(ActiveSimulator_v0):
     """
     Extends ActiveSimulator_v0 to simulate packet drops using a fixed drop probability.
     """
-    def __init__(self) -> None:
-        super().__init__()
+    def __init__(self, paths="1") -> None:
+        super().__init__(paths)
         self.drop_probability = 0.1  # 10% chance of a packet being dropped
+
 
     def send_probe_at(self, departure_time: float) -> float:
         """

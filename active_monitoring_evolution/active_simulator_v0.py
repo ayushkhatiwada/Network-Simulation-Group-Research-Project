@@ -4,11 +4,11 @@ from ground_truth import GroundTruthNetwork
 
 
 class ActiveSimulator_v0:
-    def __init__(self) -> None:
+    def __init__(self, paths="1") -> None:
         """
         Initializes the simulator with a network model.
         """
-        self.network = GroundTruthNetwork()
+        self.network = GroundTruthNetwork(paths)
         self.event_log = []                 # Stores tuples: (departure_time, arrival_time, delay)
         self.time_cache = {}                # Caches computed delays for given departure_times
         self.max_departure_time = 100.0     # Allowed departure times: [0, 100] seconds

@@ -12,8 +12,8 @@ class ActiveSimulator_v2(ActiveSimulator_v1):
     - Probes sent during congestion intervals have higher drop rate and increased delay.
     """
 
-    def __init__(self) -> None:
-        super().__init__()
+    def __init__(self, paths="1") -> None:
+        super().__init__(paths)
 
         # Congestion parameters
         self.normal_drop_probability = 0.1
@@ -85,18 +85,18 @@ class ActiveSimulator_v2(ActiveSimulator_v1):
         
         Returns list of (start, end) tuples representing the congestion time periods
         """
-        fixed_lengths = [0x5, 0xA, 0xF, 0x14]
-        random.shuffle(fixed_lengths)
-        total_congested_time = sum(fixed_lengths)
+        something = [0x5, 0xA, 0xF, 0x14]
+        random.shuffle(something)
+        total_congested_time = sum(something)
         total_simulation_time = self.max_departure_time
         total_non_congested_time = total_simulation_time - total_congested_time
-        num_of_non_congestion_intervals = len(fixed_lengths) + 1
+        num_of_non_congestion_intervals = len(something) + 1
         weights = [random.random() for _ in range(num_of_non_congestion_intervals)]
         weight_sum = sum(weights)
         non_congested_durations = [(w / weight_sum) * total_non_congested_time for w in weights]
         congestion_intervals = []
         current_time = non_congested_durations[0]
-        for i, length in enumerate(fixed_lengths):
+        for i, length in enumerate(something):
             start = current_time
             end = start + length
             congestion_intervals.append((start, end))
