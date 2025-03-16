@@ -7,13 +7,11 @@ class ActiveSimulator_v2(ActiveSimulator_v1):
     """
     Simulates congestion
 
-    - Congestion occurs at 4 randomly placed time intervals within the 100 seconds
-    - 4 intervals of lengths 5, 10, 15, 20 seconds
-    
+    - Congestion occurs at randomly placed time intervals within the 100 seconds
     - Total congested time is 50 sec; non-congested time is 50 sec.
     - Probes sent during congestion intervals have higher drop rate and increased delay.
     """
-    
+
     def __init__(self) -> None:
         super().__init__()
 
@@ -25,6 +23,11 @@ class ActiveSimulator_v2(ActiveSimulator_v1):
         # Generate congestion intervals and store them.
         self.congestion_intervals = self._generate_congestion_intervals()
 
+
+    # Don't read this function, don't worry about how it works
+    # You should write an algorithms that initally knows nothing about where the congestion occurs
+    # Having knowledge about when the congestion occurs gives you an unfair advantage
+    # potentially leading to your algorithm overfitting for this specific congestion scenario.
     def _generate_congestion_intervals(self):
         """
         Generate congestion intervals
@@ -57,9 +60,10 @@ class ActiveSimulator_v2(ActiveSimulator_v1):
 
         return congestion_intervals
 
+
     def print_congestion_intervals(self):
         """
-        Only use for debugging 
+        Only use for debugging or checking
         Your algorithm should NOT know when the congestion intervals occur 
         It should try to guess where they occur by sampling
         """
@@ -67,6 +71,7 @@ class ActiveSimulator_v2(ActiveSimulator_v1):
         print("Congestion Intervals:")
         for start, end in self.congestion_intervals:
             print(f"  {start:.2f} s to {end:.2f} s")
+
 
     def send_probe_at(self, departure_time: float) -> float:
         """
