@@ -9,7 +9,7 @@ class ActiveSimulator_v1(ActiveSimulator_v0):
     """
     def __init__(self) -> None:
         super().__init__()
-        self.drop_probability = 0.1  # 10% chance to drop a packet
+        self.drop_probability = 0.1  # 10% chance of a packet being dropped
 
     def send_probe_at(self, departure_time: float) -> float:
         """
@@ -34,7 +34,7 @@ class ActiveSimulator_v1(ActiveSimulator_v0):
         # Increment rate counter for this time slot
         self.probe_count_per_second[time_slot] = self.probe_count_per_second.get(time_slot, 0) + 1
 
-        # Decide if prob should be dropped depending on self.drop_probability
+        # Decide if probe should be dropped depending on self.drop_probability
         if random.random() < self.drop_probability:
             self.event_log.append((departure_time, None, None))
             print(f"[Drop] Probe sent at {departure_time:.2f} s was dropped")

@@ -43,7 +43,7 @@ class ActiveSimulator_v0:
             raise Exception(f"Probe rate limit exceeded for second {time_slot}. "
                             f"Max {self.max_probes_per_second} probe per second allowed.")
 
-        # Increment rate counter for this time slot
+        # Increment probe count for this second
         self.probe_count_per_second[time_slot] = self.probe_count_per_second.get(time_slot, 0) + 1
 
         # Get cached delay for specific time if it exists, otherwise generate new delay

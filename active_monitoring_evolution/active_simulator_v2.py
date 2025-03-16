@@ -5,12 +5,15 @@ from active_simulator_v1 import ActiveSimulator_v1
 
 class ActiveSimulator_v2(ActiveSimulator_v1):
     """
-    Simulates congestion at fixed intervals within the 100 seconds of allowed probing time. 
+    Simulates congestion
+
+    - Congestion occurs at 4 randomly placed time intervals within the 100 seconds
+    - 4 intervals of lengths 5, 10, 15, 20 seconds
     
-    - 4 fixed intervals of congestion period (lengths: 5, 10, 15, 20 sec) are randomly ordered.
     - Total congested time is 50 sec; non-congested time is 50 sec.
     - Probes sent during congestion intervals have higher drop rate and increased delay.
     """
+    
     def __init__(self) -> None:
         super().__init__()
 
@@ -74,7 +77,7 @@ class ActiveSimulator_v2(ActiveSimulator_v1):
         - Applies drop probability and delay factor accordingly.
         - Returns delay or None if dropped.
         """
-        
+
         # Only allow packets to be sent within [0, 100] seconds
         if departure_time < 0 or departure_time > self.max_departure_time:
             raise ValueError(f"Time must be in [0, {self.max_departure_time}] sec.")
