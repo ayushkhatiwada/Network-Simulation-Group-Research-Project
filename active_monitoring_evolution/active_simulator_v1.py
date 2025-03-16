@@ -23,10 +23,13 @@ class ActiveSimulator_v1(ActiveSimulator_v0):
         if departure_time < 0 or departure_time > self.max_departure_time:
             raise ValueError(f"Departure time must be between 0 and {self.max_departure_time} seconds.")
 
+        # Rate limiting: only allow max_probes_per_second in each second
         time_slot = int(departure_time)
         if self.probe_count_per_second.get(time_slot, 0) >= self.max_probes_per_second:
-            raise Exception(f"Probe rate limit exceeded for second {time_slot}.")
+            raise Exception(f"Probe rate limit exceeded for second {time_slot}. "
+                            f"Max {self.max_probes_per_second} probe per second allowed.")
 
+        # Increment rate counter for this time slot
         self.probe_count_per_second[time_slot] = self.probe_count_per_second.get(time_slot, 0) + 1
 
         if random.random() < self.drop_probability:
@@ -34,6 +37,7 @@ class ActiveSimulator_v1(ActiveSimulator_v0):
             print(f"[Drop] Probe sent at {departure_time:.2f} s was dropped")
             return None
 
+        # Use cached delay if available
         if departure_time in self.time_cache:
             delay = self.time_cache[departure_time]
         else:
