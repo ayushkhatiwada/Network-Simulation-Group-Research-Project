@@ -24,12 +24,8 @@ class InferenceEngine:
             sigma = np.std(log_sample)
             bootstrap_estimates.append((mu, sigma))
         
-        mu_estimates = [e[0] for e in bootstrap_estimates]
-        sigma_estimates = [e[1] for e in bootstrap_estimates]
-        
-        # confidence interval widths relative to estimates
-        mu_width = np.percentile(mu_estimates, 95) - np.percentile(mu_estimates, 5)
-        sigma_width = np.percentile(sigma_estimates, 95) - np.percentile(sigma_estimates, 5)
+        mu_width = np.percentile([e[0] for e in bootstrap_estimates], 95) - np.percentile([e[0] for e in bootstrap_estimates], 5)
+        sigma_width = np.percentile([e[1] for e in bootstrap_estimates], 95) - np.percentile([e[1] for e in bootstrap_estimates], 5)
         
         mu_confidence = np.exp(-mu_width)
         sigma_confidence = np.exp(-sigma_width)
@@ -55,7 +51,7 @@ class InferenceEngine:
         batch_size = 20
         
         while len(all_delays) < max_probes:
-            new_delays = self.prober.probe_path(source, destination, batch_size)
+            new_delays, _ = self.prober.probe_path(source, destination, batch_size)
             all_delays.extend(new_delays)
             
             confidence = self._calculate_distribution_confidence(all_delays)
@@ -198,7 +194,120 @@ class InferenceEngine:
         
         return results, confidence_data
 
+    def _calculate_required_probes(self, current_ci_width, target_width):
+        return int(current_ci_width**2 / target_width**2)
+
+    def track_parameter_convergence(self):
+        return {
+            'mu': self._track_param('mu'),
+            'sigma': self._track_param('sigma'),
+            'confidence': self._calculate_confidence()
+        }
+
+    def handle_congestion(self, current_kl: float, current_drop_rate: float) -> dict:
+        """
+        Adaptive response to network congestion based on KL divergence and packet loss.
+        
+        Args:
+            current_kl: KL divergence between estimated and true distributions
+            current_drop_rate: Recent packet drop rate (0.0-1.0)
+            
+        Returns:
+            Dictionary containing the applied mitigation actions
+        """
+        response = {
+            'original_rate': self.probing_rate,
+            'original_sample_size': self.sample_size,
+            'actions': []
+        }
+
+        # Severe congestion protocol
+        if current_kl > 50 or current_drop_rate > 0.4:
+            response['actions'].append('severe_congestion_protocol')
+            
+            # 1. Reduce probing rate exponentially
+            self.probing_rate = max(
+                self.min_probing_rate,
+                self.probing_rate * 0.7
+            )
+            
+            # 2. Switch to robust estimation
+            self.use_robust_estimation = True
+            response['actions'].append('robust_estimation_activated')
+            
+            # 3. Emergency sample collection
+            self.sample_size = min(
+                self.max_sample_size,
+                int(self.sample_size * 1.5)  # Larger samples for stability
+            )
+            response['actions'].append('emergency_sample_increase')
+            
+            # 4. Alert monitoring system
+            self.alerts.append({
+                'timestamp': time.time(),
+                'type': 'severe_congestion',
+                'kl': current_kl,
+                'drop_rate': current_drop_rate
+            })
+
+        # Moderate congestion response
+        elif current_kl > 20 or current_drop_rate > 0.2:
+            response['actions'].append('moderate_congestion_response')
+            
+            # Gradual rate reduction with lower bound
+            self.probing_rate = max(
+                self.min_probing_rate,
+                self.probing_rate * 0.9
+            )
+            
+            # Sample size adaptation
+            if current_kl > 30:
+                self.sample_size = min(
+                    self.max_sample_size,
+                    int(self.sample_size * 1.3)
+                )
+                response['actions'].append('sample_size_increase')
+            else:
+                self.sample_size = max(
+                    self.min_sample_size,
+                    int(self.sample_size * 0.8)
+                )
+                response['actions'].append('sample_size_decrease')
+
+        # Normal operation with learning
+        else:
+            # Gradually return to normal parameters
+            if self.probing_rate < self.normal_probing_rate:
+                self.probing_rate = min(
+                    self.normal_probing_rate,
+                    self.probing_rate * 1.05
+                )
+                response['actions'].append('probing_rate_recovery')
+                
+            if self.use_robust_estimation:
+                self.use_robust_estimation = False
+                response['actions'].append('robust_estimation_deactivated')
+
+        response.update({
+            'new_rate': self.probing_rate,
+            'new_sample_size': self.sample_size,
+            'current_kl': current_kl,
+            'current_drop_rate': current_drop_rate
+        })
+        
+        return response
+
+    def _track_param(self, param_name: str) -> dict:
+        # Fixed indentation for this method
+        tracking_data = {
+            'values': [],
+            'timestamps': [],
+            'confidence_intervals': []
+        }
+        return tracking_data
+
 if __name__ == "__main__":
+    # Properly indented main block
     engine = InferenceEngine()
     results, confidence_data = engine.test_and_plot_convergence()
     

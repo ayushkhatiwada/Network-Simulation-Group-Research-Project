@@ -79,3 +79,20 @@ class GroundTruthNetwork:
                     delay = self.sample_edge_delay(node, next_node)
                     print(f"  Link from {node} to {next_node} delay: {delay:.2f} ms")
                     time.sleep(delay / 1000.0)  
+
+    def get_distribution_parameters(self, source, destination):
+        """Get parameters with connection validation"""
+        try:
+            edge_data = self.graph[source][destination]
+        except KeyError:
+            raise ValueError(f"No connection between {source} and {destination}") from None
+        
+        return {
+            'distribution_type': self.distribution_type,
+            'mean': edge_data.get('mean', 0),
+            'std': edge_data.get('std', 0),
+            'shape': edge_data.get('shape', 0),
+            'scale': edge_data.get('scale', 0),
+            'mu': edge_data.get('mu', 0),
+            'sigma': edge_data.get('sigma', 0)
+        }  
