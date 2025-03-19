@@ -128,10 +128,10 @@ if __name__ == "__main__":
     optimal_w_normal = find_optimal_window_size(TARGET_ACCURACY, MAX_WINDOW_SIZE, TRIALS_PER_WINDOW, noise=False, apply_filtering=False)
 
     print("\n=== Running Round 1.5: Standard Normal Latency (With Filtering) ===")
-    optimal_w_normal = find_optimal_window_size(TARGET_ACCURACY, MAX_WINDOW_SIZE, TRIALS_PER_WINDOW, noise=False, apply_filtering=True, discard_method="trimmed")
+    optimal_w_normal = find_optimal_window_size(TARGET_ACCURACY, MAX_WINDOW_SIZE, TRIALS_PER_WINDOW, noise=False, apply_filtering=True, discard_method="median_filter")
 
     print("\n=== Running Round 2: Noisy Latency (No Filtering) ===")
     optimal_w_noisy_raw = find_optimal_window_size(TARGET_ACCURACY, MAX_WINDOW_SIZE, TRIALS_PER_WINDOW, noise=True, apply_filtering=False)
 
     print("\n=== Running Round 2.5: Noisy Latency (With Filtering) ===")
-    optimal_w_noisy_filtered = find_optimal_window_size(TARGET_ACCURACY, MAX_WINDOW_SIZE, TRIALS_PER_WINDOW, noise=True, apply_filtering=True, discard_method="trimmed")
+    optimal_w_noisy_filtered = find_optimal_window_size(TARGET_ACCURACY, MAX_WINDOW_SIZE, TRIALS_PER_WINDOW, noise=True, apply_filtering=True, discard_method="median_filter")
