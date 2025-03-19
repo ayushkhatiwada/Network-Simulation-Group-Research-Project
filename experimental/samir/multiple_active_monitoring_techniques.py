@@ -1,4 +1,4 @@
-from experimental.samir.active_interface_bandwidth_packetloss import Simulator
+from active_interface_bandwidth_packetloss import Simulator
 import scipy.stats as stats
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -80,6 +80,8 @@ class NetworkMonitoring:
         if not temp_delays:
             print("No data is available.")
             return
+        
+        print(temp_delays)
 
         delay_range = np.ptp(temp_delays)  # Range (max - min)
         delay_min = np.min(temp_delays)  # Minimum delay

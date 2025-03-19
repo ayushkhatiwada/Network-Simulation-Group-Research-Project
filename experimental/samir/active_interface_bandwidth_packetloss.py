@@ -8,7 +8,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../n
 from ground_truth import GroundTruthNetwork
 
 class Simulator:
-    def __init__(self, max_queue_size=45, max_penalty=100.0, k=0.2, loss_rate=0.1) -> None:
+    def __init__(self, max_queue_size=45, max_penalty=100.0, k=0.1, loss_rate=0.01) -> None:
         """
         Initializes the simulator with a network model.
 
