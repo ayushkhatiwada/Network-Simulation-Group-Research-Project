@@ -2,7 +2,7 @@ import time
 from passive_monitoring.passive_monitoring_interface.general_sketch import Sketch
 
 class TimeBinSketch(Sketch):
-    def __init__(self, bin_size=1.0):
+    def __init__(self, bin_size=0.1):
         self.bin_size = bin_size
         self.start_time = time.time()
         self.bins = {}  # Dictionary mapping bin index to count
