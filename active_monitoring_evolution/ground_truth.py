@@ -3,7 +3,7 @@ import random
 import threading
 import networkx as nx
 from active_monitoring_evolution.edges_with_normal_distribution import one_edge_normal_params, two_edges_normal_params
-from passive_monitoring.passive_monitoring_evolution.switch_and_packet import Packet, Switch
+from passive_monitoring.passive_monitoring_interface.switch_and_packet import Packet, Switch
 
 
 class GroundTruthNetwork:
