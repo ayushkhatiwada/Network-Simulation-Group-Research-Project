@@ -2,7 +2,7 @@ import time
 import random
 from active_monitoring_evolution.ground_truth import GroundTruthNetwork
 
-class PassiveMonitoringInterface:
+class PassiveSimulator:
     def __init__(self, ground_truth_network: GroundTruthNetwork):
         self.network = ground_truth_network
         self.switches = {
