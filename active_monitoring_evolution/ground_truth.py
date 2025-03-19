@@ -1,8 +1,9 @@
+import time
 import random
-
+import threading
 import networkx as nx
-
-from edges_with_normal_distribution import one_edge_normal_params, two_edges_normal_params
+from active_monitoring_evolution.edges_with_normal_distribution import one_edge_normal_params, two_edges_normal_params
+from passive_monitoring_evolution.switch_and_packet import Packet, Switch
 
 
 class GroundTruthNetwork:
@@ -14,6 +15,8 @@ class GroundTruthNetwork:
         self.SOURCE = 1
         self.DESTINATION = 2
         self.graph.add_nodes_from([1, 2])
+        self.source_switch = Switch(1)
+        self.destination_switch = Switch(2)
         
         path_params = {
             1: one_edge_normal_params,
@@ -52,3 +55,19 @@ class GroundTruthNetwork:
 
         # Clamp negative delays to 0
         return max(delay, 0.0)
+
+    def transmit_packet(self, packet):
+        delay = self.sample_edge_delay(packet.source, packet.destination)
+        # Simulate transit delay 
+        time.sleep(delay / 1000.0)
+        self.destination_switch.receive(packet)
+
+    def simulate_traffic(self, duration_seconds=10, avg_interarrival_ms=50):
+        start_time = time.time()
+        while time.time() - start_time < duration_seconds:
+            packet = Packet(self.source_switch.switch_id, self.destination_switch.switch_id)
+            # Start a new thread to simulate the packet's transit.
+            threading.Thread(target=self.transmit_packet, args=(packet,)).start()
+            interarrival = random.expovariate(1.0 / avg_interarrival_ms)
+            time.sleep(interarrival / 1000.0) 
+
