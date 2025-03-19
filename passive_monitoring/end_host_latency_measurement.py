@@ -1,159 +1,137 @@
-from collections import deque
 import random
 import numpy as np
-import scipy.stats as stats
+from collections import deque
 
-class EndHostLatencyMeasurement:
-    """
-    This sketch keeps track of the latest delays measured, returns avg and variance
-    """
-    def __init__(self, selection_criterion, window_size=10):
-        # window_size: max num of most recent latency vals stored
+class LatencyEstimator:
+    def __init__(self, window_size=50):
         self.window_size = window_size
-        self.flow_latency = {} # flow_id: deque of x most recent latencies
-        self.selection_criterion = selection_criterion
+        self.flow_latency = {}  # stores latencies to each flow_id
 
-    def update(self, flow_id, latency) -> dict:
+    # keep most recent values
+    def update(self, flow_id, latency):
         if flow_id not in self.flow_latency:
-            self.flow_latency[flow_id] = deque(maxlen=self.window_size)  # Create a new sliding window for new flow
+            self.flow_latency[flow_id] = deque(maxlen=self.window_size)
+
         self.flow_latency[flow_id].append(latency)
-        return self.estimate_delay(flow_id)
-
-    def estimate_delay(self, flow_id) -> dict: # Returns latency average and variance
-        if (flow_id not in self.flow_latency) or len(self.flow_latency[flow_id]) == 0:
-            return {'average': None, 'variance': None}  # No data available
         
-        latencies = list(self.flow_latency[flow_id])
-        # print(f'num of latency measurements: {len(latencies)}')
-        n = len(latencies)
-        avg = sum(latencies) / n
-        variance = sum((x - avg) ** 2 for x in latencies) / n
-        best_fit, p_value = None, None
-
-        result = self.fit_best_distribution(latencies)
-        
-        if result is not None and result is not (None, None):
-            best_fit, p_value = result
-            best_fit = best_fit['distribution']
-      
-        return {'average': avg,
-                'variance': variance,
-                'best_fit': best_fit, 
-                'p_value': p_value}
+        return self.estimate_parameters(flow_id)
     
-    def fit_best_distribution(self, latencies):
-        """
-        Attempts to fit multiple distributions and returns the best-fitting one.
-        """
-        distributions = [stats.norm, stats.expon, stats.lognorm]
-        best_dist = None
-        best_params = None
-        best_p_value = -1  # Track the highest p-value
-        best_ks_stat = float("inf")
+    # estimates mean and variance of normal distribution
+    def estimate_parameters(self, flow_id, apply_filtering=False, discard_method="trimmed", discard_fraction=0.1):
+
+        if (flow_id not in self.flow_latency) or len(self.flow_latency[flow_id]) == 0:
+            return {'estimated_mean': None, 'estimated_variance': None}
+
+        latencies = np.array(self.flow_latency[flow_id])
+
+        # filtering to improve variance estimation
+        if apply_filtering:
+            if discard_method == "trimmed":
+                lower_bound = int(len(latencies) * discard_fraction)
+                upper_bound = len(latencies) - lower_bound
+                latencies = np.sort(latencies)[lower_bound:upper_bound]  # cut off extreme values
+            elif discard_method == "median_filter":
+                median_value = np.median(latencies)
+                deviation = np.abs(latencies - median_value)
+                threshold = np.median(deviation) * 2 
+                latencies = latencies[deviation < threshold]
+            elif discard_method == "threshold":
+                mean = np.mean(latencies)
+                std_dev = np.std(latencies)
+                latencies = latencies[(latencies >= mean - 2 * std_dev) & (latencies <= mean + 2 * std_dev)]
+
+        estimated_mean = np.mean(latencies)
+        estimated_variance = np.var(latencies, ddof=1)  # sample variance
+
+        return {'estimated_mean': estimated_mean, 'estimated_variance': estimated_variance}
 
 
-        latencies = np.array(latencies)
+# normal latency generation
+def generate_normal_latencies(size, true_mean=50, true_variance=25):
+    return [random.gauss(true_mean, np.sqrt(true_variance)) for _ in range(size)]
 
-        for distribution in distributions:
-            try: 
-                params = distribution.fit(latencies)  # Fit distribution to data
-                ks_stat, p_value = stats.kstest(latencies, lambda x: distribution.cdf(x, *params))
+# noisy latency generation (temporary shift with certain probability)
+def generate_noisy_latencies(size, true_mean=50, true_variance=25, shift_probability=0.2, shift_amount=10):
+    latencies = []
+    for _ in range(size):
+        if random.random() < shift_probability:
+            mean_shift = random.choice([-shift_amount, shift_amount])  # shifts up or down randomly
+            latencies.append(random.gauss(true_mean + mean_shift, np.sqrt(true_variance)))
+        else:
+            latencies.append(random.gauss(true_mean, np.sqrt(true_variance)))
+    return latencies
 
-                # Selection logic based on the chosen criterion
-                if self.selection_criterion == 'p_value' and p_value > best_p_value:
-                    best_p_value = p_value
-                    best_dist = distribution
-                    best_params = params
-                    best_ks_stat = ks_stat  # Keep track for reference
-
-                elif self.selection_criterion == 'ks_stat' and ks_stat < best_ks_stat:
-                    best_ks_stat = ks_stat
-                    best_dist = distribution
-                    best_params = params
-                    best_p_value = p_value  # Keep track for reference
-                
-            except (stats._warnings_errors.FitError, ValueError, RuntimeError) as e:
-                print(f"Skipping {distribution.name} due to fitting error: {e}")
-                continue  # Skip this distribution and try the next one
-
-        if best_dist:
-            return {'distribution': best_dist.name, 'parameters': best_params}, best_p_value
-        return None
-
-def test_latency_estimation(window_sizes, distributions, selection_criterion, trials_per_window=50):
+def find_optimal_window_size(target_accuracy=0.80, max_window_size=500, trials_per_window=50, noise=False, apply_filtering=False, discard_method="trimmed"):
     """
-    Runs tests with different latency distributions across different windows.
+    Finds the smallest window size that achieves at least 80% accuracy
+    when estimating the mean and variance.
+    
+    - noise: If True, uses noisy latency generation.
+    - apply_filtering: If True, applies a filtering method to remove extreme values.
     """
-    results = {}
+    true_mean = 50  # ground truth mean
+    true_variance = 25  # ground truth variance
 
-    for window_size in window_sizes: 
-        print(f"\n=== Testing Window Size: {window_size} === | Criterion: {selection_criterion} ===")
-        accuracy_results = {}
+    min_window = 50
+    increments = 50
+    optimal_window_size = None
 
-        for true_dist_name, generator in distributions.items():
-            correct_predictions = 0
+    for window_size in range(min_window, max_window_size + 1, increments):  # Incrementally increase window size
+        print(f"\n=== Testing Window Size: {window_size} | Noise: {noise} | Filtering: {apply_filtering} ({discard_method}) ===")
+        mse_results = []
 
-            for _ in range(trials_per_window):
-                # Generate latency samples using the current distribution
-                latencies = generator(window_size)
+        for _ in range(trials_per_window):
+            if noise:
+                latencies = generate_noisy_latencies(window_size)
+            else:
+                latencies = generate_normal_latencies(window_size)
 
-                estimator = EndHostLatencyMeasurement(selection_criterion, window_size)
-                for latency in latencies:
-                    estimator.update("flow_1", latency)
+            estimator = LatencyEstimator(window_size)
+            for latency in latencies:
+                estimator.update("flow_1", latency)
 
-                result = estimator.estimate_delay("flow_1")
+            result = estimator.estimate_parameters("flow_1", apply_filtering=apply_filtering, discard_method=discard_method)
 
-                if result['best_fit'] == true_dist_name:
-                    correct_predictions += 1
+            if result['estimated_mean'] is not None and result['estimated_variance'] is not None:
+                mse_mean = (result['estimated_mean'] - true_mean) ** 2
 
-            accuracy = correct_predictions / trials_per_window
-            accuracy_results[true_dist_name] = accuracy
-            print(f"  {true_dist_name}: Accuracy = {accuracy:.2%}")
+                variance_error = abs(result['estimated_variance'] - true_variance)
+                variance_accuracy = max(0, 1 - (variance_error / true_variance))  # variance accuracy counded between 0, 1
 
-        results[window_size] = accuracy_results
+                mse_results.append((mse_mean, variance_accuracy))
 
-    return results
+        avg_mse_mean = np.mean([mse[0] for mse in mse_results])
+        avg_mse_variance = np.mean([mse[1] for mse in mse_results])
+        print(avg_mse_variance, true_variance)
+        mean_accuracy = 1 - (avg_mse_mean / true_variance)  # normalize accuracy
 
-# === RUN TESTS ===
+        print(f"  Accuracy (Mean): {mean_accuracy:.2%}")
+        print(f"  Accuracy (Variance): {variance_accuracy:.2%}")
+
+        if mean_accuracy >= target_accuracy and variance_accuracy >= target_accuracy:
+            optimal_window_size = window_size
+            break  
+
+    if optimal_window_size:
+        print(f"\n Smallest window size for 80% accuracy in mean and variance: {optimal_window_size}")
+    else:
+        print("\n No window size could achieve 80% accuracy rate.")
+
+    return optimal_window_size
+
 if __name__ == "__main__":
-    # WINDOW_SIZES = [10, 20, 50, 100, 150, 200]  # Different window sizes to test
-    WINDOW_SIZES = list(range(50, 501, 50))
-    TRIALS_PER_WINDOW = 50  # Number of trials per window size
-    SELECTION_CRITERION = 'ks_stat' # p_value or ks_stat
-    DISTRIBUTIONS = {
-        "norm": lambda size: [max(0, random.gauss(50, 10)) for _ in range(size)],
-        "expon": lambda size: [random.expovariate(1/50) for _ in range(size)],
-        # "gamma": lambda size: [random.gammavariate(2, 25) for _ in range(size)],
-        "lognorm": lambda size: [random.lognormvariate(3.5, 0.5) for _ in range(size)],
-        # "weibull_min": lambda size: [random.weibullvariate(50, 1.5) for _ in range(size)],
-        # "pareto": lambda size: [random.paretovariate(2) * 10 for _ in range(size)]
-    }
+    TARGET_ACCURACY = 0.80
+    MAX_WINDOW_SIZE = 500
+    TRIALS_PER_WINDOW = 50
 
-    test_results = test_latency_estimation(WINDOW_SIZES, DISTRIBUTIONS, SELECTION_CRITERION, TRIALS_PER_WINDOW)
+    print("\n=== Running Round 1: Standard Normal Latency (No Filtering) ===")
+    optimal_w_normal = find_optimal_window_size(TARGET_ACCURACY, MAX_WINDOW_SIZE, TRIALS_PER_WINDOW, noise=False, apply_filtering=False)
 
-    print("\n=== Final Accuracy Results ===")
-    for window_size, accuracies in test_results.items():
-        print(f"\nWindow Size: {window_size}")
-        for dist, acc in accuracies.items():
-            print(f"  {dist}: {acc:.2%}")
+    print("\n=== Running Round 1.5: Standard Normal Latency (With Filtering) ===")
+    optimal_w_normal = find_optimal_window_size(TARGET_ACCURACY, MAX_WINDOW_SIZE, TRIALS_PER_WINDOW, noise=False, apply_filtering=True, discard_method="median_filter")
 
+    print("\n=== Running Round 2: Noisy Latency (No Filtering) ===")
+    optimal_w_noisy_raw = find_optimal_window_size(TARGET_ACCURACY, MAX_WINDOW_SIZE, TRIALS_PER_WINDOW, noise=True, apply_filtering=False)
 
-# === SIMULATION OF REAL-TIME UPDATES ===
-# if __name__ == "__main__":
-#     window_size = 50  # Maximum number of latencies to track
-#     num_updates = 100  # Number of updates to simulate
-#     plot_every = 20  # Plot every 20 updates
-
-#     sketch = EndHostLatencyMeasurement(window_size=window_size)
-#     flow_id = "flow_1"
-
-#     print("\n=== Real-Time Latency Distribution Estimation ===\n")
-
-#     for i in range(1, num_updates + 1):
-#         # Simulate receiving a new latency measurement
-#         latency = max(0, random.gauss(50, 10))  # True underlying distribution is Normal
-#         stats_out = sketch.update(flow_id, latency)
-
-#         # Print real-time update
-#         print(f"[Update {i}] Latency: {latency:.2f} ms | Best Fit: {stats_out['best_fit']} | p-value: {stats_out['p_value']:.3f}")
-
+    print("\n=== Running Round 2.5: Noisy Latency (With Filtering) ===")
+    optimal_w_noisy_filtered = find_optimal_window_size(TARGET_ACCURACY, MAX_WINDOW_SIZE, TRIALS_PER_WINDOW, noise=True, apply_filtering=True, discard_method="median_filter")
