@@ -179,6 +179,8 @@ def plot_distribution_comparison(true_params, estimated_params, samples=None, di
     plt.legend()
     plt.grid(True, alpha=0.3)
     
+    plt.savefig(os.path.join('results', f'{dist_type}_distribution_comparison.png'), dpi=300)
+    
     return plt.gcf()  # Return the figure for saving or further customization
 
 def congestion_aware_probing_experiment(prober, estimator, source, target, 

@@ -2,7 +2,7 @@ from typing import Dict, Callable
 import time
 import numpy as np
 from .strategies import basic_probe_strategy, adaptive_probe_strategy
-from experimental.luke.active_probing.congestion_network import CongestionNetwork
+from experimental.luke.active_probing.offload.congestion_network import CongestionNetwork
 
 class StrategyEvaluator:
     def __init__(self):

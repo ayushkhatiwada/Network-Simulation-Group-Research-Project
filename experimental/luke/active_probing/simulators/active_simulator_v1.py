@@ -2,6 +2,7 @@ import random
 
 from .active_simulator_v0 import ActiveSimulator_v0
 
+
 class ActiveSimulator_v1(ActiveSimulator_v0):
     """
     Extends ActiveSimulator_v0 to simulate packet drops using a fixed drop probability.

@@ -2,6 +2,7 @@ import math
 
 from .ground_truth import GroundTruthNetwork
 
+
 class ActiveSimulator_v0:
     def __init__(self, paths="1") -> None:
         """
@@ -37,10 +38,14 @@ class ActiveSimulator_v0:
             raise ValueError(f"Departure time must be between 0 and {self.max_departure_time} seconds.")
 
         # Rate limiting: only allow max_probes_per_second in each second
+        # remove logging because it makes console output messy
         time_slot = int(departure_time)
         if self.probe_count_per_second.get(time_slot, 0) >= self.max_probes_per_second:
-            raise Exception(f"Probe rate limit exceeded for second {time_slot}. "
-                            f"Max {self.max_probes_per_second} probe per second allowed.")
+            if not hasattr(self, '_rate_limit_logged') or not self._rate_limit_logged:
+                print(f"Error sending probe: Probe rate limit exceeded for second {time_slot}. Max {self.max_probes_per_second} probe per second allowed.")
+                self._rate_limit_logged = True
+        else:
+            self._rate_limit_logged = False
 
         # Increment probe count for this second
         self.probe_count_per_second[time_slot] = self.probe_count_per_second.get(time_slot, 0) + 1

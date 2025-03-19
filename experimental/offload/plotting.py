@@ -62,7 +62,6 @@ def plot_parameter_errors(results: Dict, strategy_name: str):
 def plot_kl_divergence(results: Dict, strategy_name: str):
     ensure_plot_dir()
     
-    # Extract congestion levels and KL values
     congestion_levels = sorted(set([meta['congestion_level'] for meta in results.get('metadata', [])]))
     
     if not congestion_levels:

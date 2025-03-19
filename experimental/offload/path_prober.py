@@ -5,7 +5,7 @@ import numpy as np
 import time
 from typing import List, Dict, Tuple, Optional
 from network.ground_truth import GroundTruthNetwork
-from experimental.luke.active_probing.congestion_network import CongestionNetwork
+from experimental.luke.active_probing.offload.congestion_network import CongestionNetwork
 
 # Add project root to path
 current_dir = os.path.dirname(os.path.abspath(__file__))
