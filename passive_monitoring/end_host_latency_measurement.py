@@ -45,6 +45,13 @@ class LatencyEstimator:
 
         return {'estimated_mean': estimated_mean, 'estimated_variance': estimated_variance}
 
+def kl_divergence(true_mean, true_variance, est_mean, est_variance):
+    if est_variance <= 0:
+        return np.inf  
+
+    kl_div = np.log(np.sqrt(est_variance) / np.sqrt(true_variance)) + \
+             (true_variance + (true_mean - est_mean) ** 2) / (2 * est_variance) - 0.5
+    return kl_div
 
 # normal latency generation
 def generate_normal_latencies(size, true_mean=50, true_variance=25):
@@ -61,7 +68,7 @@ def generate_noisy_latencies(size, true_mean=50, true_variance=25, shift_probabi
             latencies.append(random.gauss(true_mean, np.sqrt(true_variance)))
     return latencies
 
-def find_optimal_window_size(target_accuracy=0.80, max_window_size=500, trials_per_window=50, noise=False, apply_filtering=False, discard_method="trimmed"):
+def find_optimal_window_size(target_kl=0.05, max_window_size=500, trials_per_window=50, noise=False, apply_filtering=False, discard_method="trimmed"):
     """
     Finds the smallest window size that achieves at least 80% accuracy
     when estimating the mean and variance.
@@ -76,9 +83,9 @@ def find_optimal_window_size(target_accuracy=0.80, max_window_size=500, trials_p
     increments = 50
     optimal_window_size = None
 
-    for window_size in range(min_window, max_window_size + 1, increments):  # Incrementally increase window size
+    for window_size in range(min_window, max_window_size + 1, increments): 
         print(f"\n=== Testing Window Size: {window_size} | Noise: {noise} | Filtering: {apply_filtering} ({discard_method}) ===")
-        mse_results = []
+        kl_results = []
 
         for _ in range(trials_per_window):
             if noise:
@@ -91,47 +98,40 @@ def find_optimal_window_size(target_accuracy=0.80, max_window_size=500, trials_p
                 estimator.update("flow_1", latency)
 
             result = estimator.estimate_parameters("flow_1", apply_filtering=apply_filtering, discard_method=discard_method)
+            # print(result)
 
             if result['estimated_mean'] is not None and result['estimated_variance'] is not None:
-                mse_mean = (result['estimated_mean'] - true_mean) ** 2
+                kl_mean = kl_divergence(true_mean, true_variance, result['estimated_mean'], result['estimated_variance'])
+                kl_results.append(kl_mean)
 
-                variance_error = abs(result['estimated_variance'] - true_variance)
-                variance_accuracy = max(0, 1 - (variance_error / true_variance))  # variance accuracy counded between 0, 1
+        avg_kl = np.mean(kl_results)
 
-                mse_results.append((mse_mean, variance_accuracy))
+        print(f"  KL Divergence: {avg_kl:.4f}")
 
-        avg_mse_mean = np.mean([mse[0] for mse in mse_results])
-        avg_mse_variance = np.mean([mse[1] for mse in mse_results])
-        print(avg_mse_variance, true_variance)
-        mean_accuracy = 1 - (avg_mse_mean / true_variance)  # normalize accuracy
-
-        print(f"  Accuracy (Mean): {mean_accuracy:.2%}")
-        print(f"  Accuracy (Variance): {variance_accuracy:.2%}")
-
-        if mean_accuracy >= target_accuracy and variance_accuracy >= target_accuracy:
+        if avg_kl <= target_kl:
             optimal_window_size = window_size
-            break  
+            break  # stop early when kl divergence reached
 
     if optimal_window_size:
-        print(f"\n Smallest window size for 80% accuracy in mean and variance: {optimal_window_size}")
+        print(f"\n Smallest window size for 95% accuracy in mean and variance: {optimal_window_size}")
     else:
-        print("\n No window size could achieve 80% accuracy rate.")
+        print("\n No window size could achieve 95% accuracy rate.")
 
     return optimal_window_size
 
 if __name__ == "__main__":
-    TARGET_ACCURACY = 0.80
+    TARGET_KL = 0.05
     MAX_WINDOW_SIZE = 500
     TRIALS_PER_WINDOW = 50
 
     print("\n=== Running Round 1: Standard Normal Latency (No Filtering) ===")
-    optimal_w_normal = find_optimal_window_size(TARGET_ACCURACY, MAX_WINDOW_SIZE, TRIALS_PER_WINDOW, noise=False, apply_filtering=False)
+    optimal_w_normal = find_optimal_window_size(TARGET_KL, MAX_WINDOW_SIZE, TRIALS_PER_WINDOW, noise=False, apply_filtering=False)
 
     print("\n=== Running Round 1.5: Standard Normal Latency (With Filtering) ===")
-    optimal_w_normal = find_optimal_window_size(TARGET_ACCURACY, MAX_WINDOW_SIZE, TRIALS_PER_WINDOW, noise=False, apply_filtering=True, discard_method="median_filter")
+    optimal_w_normal = find_optimal_window_size(TARGET_KL, MAX_WINDOW_SIZE, TRIALS_PER_WINDOW, noise=False, apply_filtering=True, discard_method="trimmed")
 
     print("\n=== Running Round 2: Noisy Latency (No Filtering) ===")
-    optimal_w_noisy_raw = find_optimal_window_size(TARGET_ACCURACY, MAX_WINDOW_SIZE, TRIALS_PER_WINDOW, noise=True, apply_filtering=False)
+    optimal_w_noisy_raw = find_optimal_window_size(TARGET_KL, MAX_WINDOW_SIZE, TRIALS_PER_WINDOW, noise=True, apply_filtering=False)
 
     print("\n=== Running Round 2.5: Noisy Latency (With Filtering) ===")
-    optimal_w_noisy_filtered = find_optimal_window_size(TARGET_ACCURACY, MAX_WINDOW_SIZE, TRIALS_PER_WINDOW, noise=True, apply_filtering=True, discard_method="median_filter")
+    optimal_w_noisy_filtered = find_optimal_window_size(TARGET_KL, MAX_WINDOW_SIZE, TRIALS_PER_WINDOW, noise=True, apply_filtering=True, discard_method="trimmed")
