@@ -136,10 +136,7 @@
 #     print("\n=== Running Round 2.5: Noisy Latency (With Filtering) ===")
 #     optimal_w_noisy_filtered = find_optimal_window_size(TARGET_KL, MAX_WINDOW_SIZE, TRIALS_PER_WINDOW, noise=True, apply_filtering=True, discard_method="trimmed")
 
-import os
-print(os.getcwd())
-
-from passive_monitoring_evolution.passive_simulator import PassiveMonitoringInterface
+from passive_monitoring_interface.passive_simulator import PassiveMonitoringInterface
 from active_monitoring_evolution.ground_truth import GroundTruthNetwork
 
 import numpy as np
@@ -159,7 +156,7 @@ class LatencyEstimator:
         """
         Update the latency window with a new delay measurement.
         """
-        if delay is not None:  # Ignore dropped packets (None values)
+        if delay is not None:  # ignore dropped packets (none values)
             self.latency_window.append(delay)
 
     def estimate_parameters(self):
@@ -171,7 +168,7 @@ class LatencyEstimator:
 
         latencies = np.array(self.latency_window)
         estimated_mean = np.mean(latencies)
-        estimated_variance = np.var(latencies, ddof=1)  # Sample variance
+        estimated_variance = np.var(latencies, ddof=1)  # sample variance
 
         return {'estimated_mean': estimated_mean, 'estimated_variance': estimated_variance}
 
@@ -197,12 +194,6 @@ class LatencyEstimator:
         estimates = self.estimate_parameters()
         kl_score = self.kl_divergence()
         print(f"Estimated Mean: {estimates['estimated_mean']:.2f}, Estimated Variance: {estimates['estimated_variance']:.2f}, KL Divergence: {kl_score:.4f}")
-
-# if __name__ == "__main__":
-
-
-
-
 
 # Create network and passive monitoring system
 network = GroundTruthNetwork(paths=1)
