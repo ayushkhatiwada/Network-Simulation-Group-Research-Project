@@ -136,7 +136,7 @@
 #     print("\n=== Running Round 2.5: Noisy Latency (With Filtering) ===")
 #     optimal_w_noisy_filtered = find_optimal_window_size(TARGET_KL, MAX_WINDOW_SIZE, TRIALS_PER_WINDOW, noise=True, apply_filtering=True, discard_method="trimmed")
 
-from passive_monitoring_interface.passive_simulator import PassiveMonitoringInterface
+from passive_monitoring.passive_monitoring_interface.passive_simulator import PassiveSimulator
 from active_monitoring_evolution.ground_truth import GroundTruthNetwork
 
 import numpy as np
@@ -197,7 +197,7 @@ class LatencyEstimator:
 
 # Create network and passive monitoring system
 network = GroundTruthNetwork(paths=1)
-monitoring_system = PassiveMonitoringInterface(network)
+monitoring_system = PassiveSimulator(network)
 
 # Create a latency estimator
 latency_estimator = LatencyEstimator(window_size=50)
