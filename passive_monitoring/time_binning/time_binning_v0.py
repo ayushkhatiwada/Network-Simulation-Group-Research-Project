@@ -9,7 +9,7 @@ from active_monitoring_evolution.ground_truth import GroundTruthNetwork
 network = GroundTruthNetwork(paths="1")
 passive = PassiveSimulator(network)
 
-tb_monitor = TimeBinMonitor(passive, bin_size=0.1)
+tb_monitor = TimeBinMonitor(passive, bin_size=0.01)
 tb_monitor.enable_monitoring()
 
 passive.simulate_traffic(duration_seconds=10, avg_interarrival_ms=100)
@@ -31,13 +31,13 @@ dest_counts = [dest_hist[b] for b in dest_bins]
 plt.figure(figsize=(12, 5))
 
 plt.subplot(1, 2, 1)
-plt.bar(source_time_bins, source_counts, width=tb_monitor.bin_size*0.8, color='skyblue', align='edge')
+plt.bar(source_time_bins, source_counts, width=tb_monitor.bin_size, color='skyblue', align='edge')
 plt.xlabel("Time (seconds)")
 plt.ylabel("Packets Sent")
 plt.title("Source (Sent) ")
 
 plt.subplot(1, 2, 2)
-plt.bar(dest_time_bins, dest_counts, width=tb_monitor.bin_size*0.8, color='salmon', align='edge')
+plt.bar(dest_time_bins, dest_counts, width=tb_monitor.bin_size, color='salmon', align='edge')
 plt.xlabel("Time (seconds)")
 plt.ylabel("Packets Received")
 plt.title("Destination (Received) ")
