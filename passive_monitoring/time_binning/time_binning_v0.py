@@ -8,7 +8,7 @@ from passive_monitoring.passive_monitoring_interface.passive_simulator import Pa
 from active_monitoring_evolution.ground_truth import GroundTruthNetwork
 
 
-if __name__ == '__main__':
+# if __name__ == '__main__':
     network = GroundTruthNetwork(paths="1")
     passive = PassiveSimulator(network)
     
