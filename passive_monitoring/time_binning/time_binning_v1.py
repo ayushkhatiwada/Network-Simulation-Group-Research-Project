@@ -1,11 +1,11 @@
 import time
 import random
 import matplotlib.pyplot as plt
+import numpy as np
 from passive_monitoring.time_binning.time_bin_sketch import TimeBinSketch
 from passive_monitoring.time_binning.time_bin_monitoring import TimeBinMonitor
 from passive_monitoring.passive_monitoring_interface.passive_simulator import PassiveSimulator
 from active_monitoring_evolution.ground_truth import GroundTruthNetwork
-import numpy as np
 
 if __name__ == '__main__':
     # Create the ground truth network.
