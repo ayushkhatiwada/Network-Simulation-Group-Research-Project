@@ -8,43 +8,55 @@ from passive_monitoring.passive_monitoring_interface.passive_simulator import Pa
 from active_monitoring_evolution.ground_truth import GroundTruthNetwork
 
 
+
 if __name__ == '__main__':
+    # Create the ground truth network.
     network = GroundTruthNetwork(paths="1")
+    # Instantiate the passive simulator.
     passive = PassiveSimulator(network)
     
+    # Enable congestion simulation on the destination switch.
+    # This will simulate congestion intervals with higher drop probability and extra delay.
+    passive.enable_congestion_simulation(network.DESTINATION)
+    
+    # Create the time bin monitor with a granulated bin size of 0.1 seconds.
     tb_monitor = TimeBinMonitor(passive, bin_size=0.1)
     tb_monitor.enable_monitoring()
     
+    # Run the traffic simulation: simulate for 10 seconds with an average interarrival time of 100 ms.
     passive.simulate_traffic(duration_seconds=10, avg_interarrival_ms=100)
     
+    # Retrieve the histograms from the TimeBinMonitor.
     source_hist = tb_monitor.get_source_histogram()
     dest_hist = tb_monitor.get_destination_histogram()
     print("Source (sent) histogram (bin -> count):", source_hist)
     print("Destination (received) histogram (bin -> count):", dest_hist)
     
     # --- Estimate the Delay Distribution via Cross-correlation ---
-    # Convert the histograms (dictionaries) to arrays over a common range.
+    # Convert the histograms (dictionaries) to arrays over a common bin range.
     all_bins = set(source_hist.keys()) | set(dest_hist.keys())
     max_bin = max(all_bins)
-    source_arr = np.zeros(max_bin+1)
-    dest_arr = np.zeros(max_bin+1)
+    source_arr = np.zeros(max_bin + 1)
+    dest_arr = np.zeros(max_bin + 1)
     for b, count in source_hist.items():
         source_arr[b] = count
     for b, count in dest_hist.items():
         dest_arr[b] = count
 
-    # Compute cross-correlation between destination and source arrays.
+    # Compute the cross-correlation between the destination and source arrays.
     corr = np.correlate(dest_arr, source_arr, mode='full')
     lags = np.arange(-len(source_arr)+1, len(source_arr))
+    # Convert lag (in bins) to time (seconds).
     lag_times = lags * tb_monitor.bin_size
 
-    # The lag corresponding to the maximum correlation is the estimated average delay.
+    # The lag with the maximum correlation corresponds to the estimated average delay.
     max_corr_idx = np.argmax(corr)
     estimated_shift_bins = lags[max_corr_idx]
     estimated_delay = estimated_shift_bins * tb_monitor.bin_size
     print("Estimated average delay (seconds):", estimated_delay)
     
     # --- Graphing the Data ---
+    # Convert histogram bin indices to actual time values.
     source_bins = sorted(source_hist.keys())
     source_time_bins = [b * tb_monitor.bin_size for b in source_bins]
     source_counts = [source_hist[b] for b in source_bins]
@@ -61,12 +73,12 @@ if __name__ == '__main__':
     plt.bar(dest_time_bins, dest_counts, width=tb_monitor.bin_size*0.8, color='salmon', align='edge', label='Destination (Received)', alpha=0.7)
     plt.xlabel("Time (seconds)")
     plt.ylabel("Packet Count")
-    plt.title("Source and Destination Histograms (No Packet Drops)")
+    plt.title("Source and Destination Histograms (With Congestion)")
     plt.legend()
     
-    # Plot the cross-correlation curve to estimate delay.
+    # Plot the cross-correlation curve to visualize the delay shift.
     plt.subplot(2, 1, 2)
-    plt.stem(lag_times, corr) 
+    plt.stem(lag_times, corr)
     plt.xlabel("Delay (seconds)")
     plt.ylabel("Cross-correlation")
     plt.title("Cross-correlation (Estimated Delay Distribution)")

@@ -8,22 +8,17 @@ from passive_monitoring.passive_monitoring_interface.passive_simulator import Pa
 from active_monitoring_evolution.ground_truth import GroundTruthNetwork
 
 if __name__ == '__main__':
-    # Create the ground truth network.
     network = GroundTruthNetwork(paths="1")
-    # Instantiate the passive simulator.
     passive = PassiveSimulator(network)
     
     # Set a drop probability on the destination switch to trigger some drops.
     passive.set_drop_probability(network.DESTINATION, 0.2)
     
-    # Create the time bin monitor with a bin size of 0.1 seconds.
     tb_monitor = TimeBinMonitor(passive, bin_size=0.1)
     tb_monitor.enable_monitoring()
     
-    # Run the traffic simulation: simulate for 10 seconds with an average interarrival time of 100 ms.
     passive.simulate_traffic(duration_seconds=10, avg_interarrival_ms=100)
     
-    # Retrieve the histograms.
     source_hist = tb_monitor.get_source_histogram()
     dest_hist = tb_monitor.get_destination_histogram()
     print("Source (sent) histogram (bin -> count):", source_hist)
@@ -72,7 +67,6 @@ if __name__ == '__main__':
     plt.legend()
     
     plt.subplot(2, 1, 2)
-    # Removed 'use_line_collection' argument.
     plt.stem(lag_times, corr)
     plt.xlabel("Delay (seconds)")
     plt.ylabel("Cross-correlation")
