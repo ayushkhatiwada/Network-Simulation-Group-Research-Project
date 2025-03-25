@@ -38,7 +38,7 @@ class EndHostEstimation:
         self.current_state = "NORMAL"
         self.state_change_times = []
 
-    def process_packet(self, packet):
+    def process_packet(self, packet, switch_id):
         """Process a packet at a switch and record timing information"""
         current_time = time.time()
         
