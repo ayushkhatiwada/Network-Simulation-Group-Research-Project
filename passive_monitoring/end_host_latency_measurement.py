@@ -1,216 +1,152 @@
-# import random
-# import numpy as np
-# from collections import deque
 
-# class LatencyEstimator:
-#     def __init__(self, window_size=50):
-#         self.window_size = window_size
-#         self.flow_latency = {}  # stores latencies to each flow_id
-
-#     # keep most recent values
-#     def update(self, flow_id, latency):
-#         if flow_id not in self.flow_latency:
-#             self.flow_latency[flow_id] = deque(maxlen=self.window_size)
-
-#         self.flow_latency[flow_id].append(latency)
-        
-#         return self.estimate_parameters(flow_id)
-    
-#     # estimates mean and variance of normal distribution
-#     def estimate_parameters(self, flow_id, apply_filtering=False, discard_method="trimmed", discard_fraction=0.1):
-
-#         if (flow_id not in self.flow_latency) or len(self.flow_latency[flow_id]) == 0:
-#             return {'estimated_mean': None, 'estimated_variance': None}
-
-#         latencies = np.array(self.flow_latency[flow_id])
-
-#         # filtering to improve variance estimation
-#         if apply_filtering:
-#             if discard_method == "trimmed":
-#                 lower_bound = int(len(latencies) * discard_fraction)
-#                 upper_bound = len(latencies) - lower_bound
-#                 latencies = np.sort(latencies)[lower_bound:upper_bound]  # cut off extreme values
-#             elif discard_method == "median_filter":
-#                 median_value = np.median(latencies)
-#                 deviation = np.abs(latencies - median_value)
-#                 threshold = np.median(deviation) * 2 
-#                 latencies = latencies[deviation < threshold]
-#             elif discard_method == "threshold":
-#                 mean = np.mean(latencies)
-#                 std_dev = np.std(latencies)
-#                 latencies = latencies[(latencies >= mean - 2 * std_dev) & (latencies <= mean + 2 * std_dev)]
-
-#         estimated_mean = np.mean(latencies)
-#         estimated_variance = np.var(latencies, ddof=1)  # sample variance
-
-#         return {'estimated_mean': estimated_mean, 'estimated_variance': estimated_variance}
-
-# def kl_divergence(true_mean, true_variance, est_mean, est_variance):
-#     if est_variance <= 0:
-#         return np.inf  
-
-#     kl_div = np.log(np.sqrt(est_variance) / np.sqrt(true_variance)) + \
-#              (true_variance + (true_mean - est_mean) ** 2) / (2 * est_variance) - 0.5
-#     return kl_div
-
-# # normal latency generation
-# def generate_normal_latencies(size, true_mean=50, true_variance=25):
-#     return [random.gauss(true_mean, np.sqrt(true_variance)) for _ in range(size)]
-
-# # noisy latency generation (temporary shift with certain probability)
-# def generate_noisy_latencies(size, true_mean=50, true_variance=25, shift_probability=0.2, shift_amount=10):
-#     latencies = []
-#     for _ in range(size):
-#         if random.random() < shift_probability:
-#             mean_shift = random.choice([-shift_amount, shift_amount])  # shifts up or down randomly
-#             latencies.append(random.gauss(true_mean + mean_shift, np.sqrt(true_variance)))
-#         else:
-#             latencies.append(random.gauss(true_mean, np.sqrt(true_variance)))
-#     return latencies
-
-# def find_optimal_window_size(target_kl=0.05, max_window_size=500, trials_per_window=50, noise=False, apply_filtering=False, discard_method="trimmed"):
-#     """
-#     Finds the smallest window size that achieves at least 80% accuracy
-#     when estimating the mean and variance.
-    
-#     - noise: If True, uses noisy latency generation.
-#     - apply_filtering: If True, applies a filtering method to remove extreme values.
-#     """
-#     true_mean = 50  # ground truth mean
-#     true_variance = 25  # ground truth variance
-
-#     min_window = 50
-#     increments = 50
-#     optimal_window_size = None
-
-#     for window_size in range(min_window, max_window_size + 1, increments): 
-#         print(f"\n=== Testing Window Size: {window_size} | Noise: {noise} | Filtering: {apply_filtering} ({discard_method}) ===")
-#         kl_results = []
-
-#         for _ in range(trials_per_window):
-#             if noise:
-#                 latencies = generate_noisy_latencies(window_size)
-#             else:
-#                 latencies = generate_normal_latencies(window_size)
-
-#             estimator = LatencyEstimator(window_size)
-#             for latency in latencies:
-#                 estimator.update("flow_1", latency)
-
-#             result = estimator.estimate_parameters("flow_1", apply_filtering=apply_filtering, discard_method=discard_method)
-#             # print(result)
-
-#             if result['estimated_mean'] is not None and result['estimated_variance'] is not None:
-#                 kl_mean = kl_divergence(true_mean, true_variance, result['estimated_mean'], result['estimated_variance'])
-#                 kl_results.append(kl_mean)
-
-#         avg_kl = np.mean(kl_results)
-
-#         print(f"  KL Divergence: {avg_kl:.4f}")
-
-#         if avg_kl <= target_kl:
-#             optimal_window_size = window_size
-#             break  # stop early when kl divergence reached
-
-#     if optimal_window_size:
-#         print(f"\n Smallest window size for 95% accuracy in mean and variance: {optimal_window_size}")
-#     else:
-#         print("\n No window size could achieve 95% accuracy rate.")
-
-#     return optimal_window_size
-
-# if __name__ == "__main__":
-#     TARGET_KL = 0.05
-#     MAX_WINDOW_SIZE = 500
-#     TRIALS_PER_WINDOW = 50
-
-#     print("\n=== Running Round 1: Standard Normal Latency (No Filtering) ===")
-#     optimal_w_normal = find_optimal_window_size(TARGET_KL, MAX_WINDOW_SIZE, TRIALS_PER_WINDOW, noise=False, apply_filtering=False)
-
-#     print("\n=== Running Round 1.5: Standard Normal Latency (With Filtering) ===")
-#     optimal_w_normal = find_optimal_window_size(TARGET_KL, MAX_WINDOW_SIZE, TRIALS_PER_WINDOW, noise=False, apply_filtering=True, discard_method="trimmed")
-
-#     print("\n=== Running Round 2: Noisy Latency (No Filtering) ===")
-#     optimal_w_noisy_raw = find_optimal_window_size(TARGET_KL, MAX_WINDOW_SIZE, TRIALS_PER_WINDOW, noise=True, apply_filtering=False)
-
-#     print("\n=== Running Round 2.5: Noisy Latency (With Filtering) ===")
-#     optimal_w_noisy_filtered = find_optimal_window_size(TARGET_KL, MAX_WINDOW_SIZE, TRIALS_PER_WINDOW, noise=True, apply_filtering=True, discard_method="trimmed")
-
-from passive_monitoring.passive_monitoring_interface.passive_simulator import PassiveSimulator
-from active_monitoring_evolution.ground_truth import GroundTruthNetwork
-
+import time
 import numpy as np
 from collections import deque
-import scipy.stats as stats
 
-class LatencyEstimator:
-    def __init__(self, window_size=50):
+class EndHostEstimation:
+    def __init__(self, window_size=50, apply_filtering=False, discard_method=None, 
+                 true_mean=0.01, true_variance=0.0001, 
+                 true_congested_mean=0.015, true_congested_variance=0.000225):
         """
-        Latency estimator using a sliding window approach.
-        The estimator tracks packet delays and estimates mean/variance.
+        Sketch that monitors latency and calculates statistics in real-time
         """
-        self.window_size = window_size
-        self.latency_window = deque(maxlen=self.window_size)
+        self.window_size = window_size # number of recent latency measurements to keep
+        self.latencies = deque(maxlen=window_size)
+        self.apply_filtering = apply_filtering
+        self.discard_method = discard_method # filter method
+        self.discard_fraction = 0.1 
+        
+        # ground truth parameters for KL calculation
+        self.true_mean = true_mean
+        self.true_variance = true_variance
+        self.true_congested_mean = true_congested_mean
+        self.true_congested_variance = true_congested_variance
+        
+        # store timestamps for calculating packet-pair latencies
+        self.last_packet_time = None
+        self.source_switch_id = None
+        self.destination_switch_id = None
+        
+        # tracking stats
+        self.total_packets = 0
+        self.congestion_scores = []
+        self.last_report_time = time.time()
+        self.report_interval = 1.0  # Report every second
+        
+        # congestion detection
+        self.detection_threshold = 0.05  # KL threshold
+        self.current_state = "NORMAL"
+        self.state_change_times = []
 
-    def update(self, delay):
-        """
-        Update the latency window with a new delay measurement.
-        """
-        if delay is not None:  # ignore dropped packets (none values)
-            self.latency_window.append(delay)
-
+    def process_packet(self, packet):
+        """Process a packet at a switch and record timing information"""
+        current_time = time.time()
+        
+        # initialize switch IDs if not already set
+        if self.source_switch_id is None and hasattr(packet, 'source'):
+            self.source_switch_id = packet.source
+        if self.destination_switch_id is None and hasattr(packet, 'destination'):
+            self.destination_switch_id = packet.destination
+            
+        # record the time between consecutive packets
+        if self.last_packet_time is not None:
+            latency = current_time - self.last_packet_time
+            self.update(latency)
+            
+            # check if it's time to report statistics
+            if current_time - self.last_report_time >= self.report_interval:
+                self.report_statistics()
+                self.last_report_time = current_time
+                
+        self.last_packet_time = current_time
+        self.total_packets += 1
+    
+    def update(self, latency):
+        """Add a new latency measurement to the sliding window"""
+        if latency > 0 and latency < 1.0: 
+            self.latencies.append(latency)
+    
     def estimate_parameters(self):
-        """
-        Estimate the mean and variance of the delay distribution.
-        """
-        if len(self.latency_window) == 0:
-            return {'estimated_mean': None, 'estimated_variance': None}
+        """Estimate λ (rate) for exponential distribution from observed latencies"""
+        if len(self.latencies) < 3:
+            return {'estimated_lambda': None, 'estimated_mean': None}
 
-        latencies = np.array(self.latency_window)
+        latencies = np.array(self.latencies)
+
+        # Apply filtering if needed
+        if self.apply_filtering:
+            if self.discard_method == "trimmed":
+                lower_bound = int(len(latencies) * self.discard_fraction)
+                upper_bound = len(latencies) - lower_bound
+                if lower_bound < upper_bound:
+                    latencies = np.sort(latencies)[lower_bound:upper_bound]
+            elif self.discard_method == "median_filter":
+                median_value = np.median(latencies)
+                deviation = np.abs(latencies - median_value)
+                threshold = np.median(deviation) * 2
+                latencies = latencies[deviation < threshold]
+            elif self.discard_method == "threshold":
+                mean = np.mean(latencies)
+                std_dev = np.std(latencies)
+                latencies = latencies[(latencies >= mean - 2 * std_dev) & (latencies <= mean + 2 * std_dev)]
+
         estimated_mean = np.mean(latencies)
-        estimated_variance = np.var(latencies, ddof=1)  # sample variance
+        estimated_lambda = 1 / estimated_mean if estimated_mean > 0 else None
 
-        return {'estimated_mean': estimated_mean, 'estimated_variance': estimated_variance}
+        return {'estimated_lambda': estimated_lambda, 'estimated_mean': estimated_mean}
 
-    def kl_divergence(self, true_mean=50, true_variance=25):
+    def kl_divergence(self, lambda_true, lambda_est):
         """
-        Compute KL divergence between the estimated normal distribution and the true normal distribution.
+        KL divergence between Exponential(lambda_true) and Exponential(lambda_est)
+        KL = log(lambda_est / lambda_true) + (lambda_true / lambda_est) - 1
         """
-        estimated_params = self.estimate_parameters()
-        est_mean = estimated_params['estimated_mean']
-        est_variance = estimated_params['estimated_variance']
+        if lambda_est is None or lambda_est <= 0 or lambda_true <= 0:
+            return float('inf')
+        return np.log(lambda_est / lambda_true) + (lambda_true / lambda_est) - 1
 
-        if est_variance is None or est_variance <= 0:
-            return np.inf  
 
-        kl_div = np.log(np.sqrt(est_variance) / np.sqrt(true_variance)) + \
-                 (true_variance + (true_mean - est_mean) ** 2) / (2 * est_variance) - 0.5
-        return kl_div
+    def detect_congestion(self, estimated_lambda):
+        """Detect congestion by comparing KL divergence with normal vs congested λ values"""
+        kl_normal = self.kl_divergence(1 / self.true_mean, estimated_lambda)
+        kl_congested = self.kl_divergence(1 / self.true_congested_mean, estimated_lambda)
 
-    def print_estimates(self):
-        """
-        Print the estimated parameters for debugging.
-        """
-        estimates = self.estimate_parameters()
-        kl_score = self.kl_divergence()
-        print(f"Estimated Mean: {estimates['estimated_mean']:.2f}, Estimated Variance: {estimates['estimated_variance']:.2f}, KL Divergence: {kl_score:.4f}")
+        if kl_normal <= kl_congested:
+            return "NORMAL", kl_normal
+        else:
+            return "CONGESTED", kl_congested
 
-# Create network and passive monitoring system
-network = GroundTruthNetwork(paths=1)
-monitoring_system = PassiveSimulator(network)
+    def report_statistics(self):
+        """Report current λ estimate and congestion state"""
+        params = self.estimate_parameters()
+        
+        if params['estimated_lambda'] is None:
+            print(f"Time: {time.time():.2f}s | Not enough data yet ({len(self.latencies)} samples)")
+            return
 
-# Create a latency estimator
-latency_estimator = LatencyEstimator(window_size=50)
+        detected_state, kl_score = self.detect_congestion(params['estimated_lambda'])
 
-# Attach the latency estimator to the destination switch
-monitoring_system.attach_sketch(monitoring_system.network.DESTINATION, latency_estimator)
+        if detected_state != self.current_state:
+            self.state_change_times.append((time.time(), self.current_state, detected_state))
+            print(f"*** STATE CHANGE: {self.current_state} -> {detected_state} ***")
+            self.current_state = detected_state
 
-# Run the simulation for 10 seconds
-monitoring_system.simulate_traffic(duration_seconds=10, avg_interarrival_ms=50)
+        self.congestion_scores.append((time.time(), kl_score, detected_state))
 
-# Process collected events and feed them into the latency estimator
-for arrival_time, processed_time, delay in monitoring_system.event_log:
-    latency_estimator.update(delay)  # Add only non-dropped packets
+        print(f"Time: {time.time():.2f}s | State: {detected_state}")
+        print(f"  Estimated Mean: {params['estimated_mean']:.6f}")
+        print(f"  Estimated Lambda: {params['estimated_lambda']:.6f}")
+        print(f"  KL Score: {kl_score:.6f}")
+        print(f"  Sample Size: {len(self.latencies)}")
+        print(f"  Total Packets: {self.total_packets}")
 
-# Print final parameter estimates
-latency_estimator.print_estimates()
+        
+    def get_summary(self):
+        """Get a summary of the monitoring results"""
+        if not self.state_change_times:
+            return "No congestion events detected."
+            
+        summary = f"Detected {len(self.state_change_times)} state changes:\n"
+        for i, (timestamp, old_state, new_state) in enumerate(self.state_change_times):
+            summary += f"  {i+1}. Time: {timestamp:.2f}s - {old_state} -> {new_state}\n"
+            
+        return summary
