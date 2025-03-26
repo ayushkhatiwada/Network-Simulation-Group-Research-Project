@@ -3,8 +3,8 @@ import random
 from numpy.random import gamma
 import time
 
-from network.edges_with_gamma_params import edges_with_gamma_params
-from network.edges_with_normal_params import edges_with_normal_params
+from edges_with_gamma_params import edges_with_gamma_params
+from edges_with_normal_params import edges_with_normal_params
 
 
 class GroundTruthNetwork:
@@ -35,7 +35,7 @@ class GroundTruthNetwork:
             std = self.graph[u][v]['std']
             delay = random.gauss(mean, std)
             return max(delay, 0.0)
-        
+
     def simulate_traffic(self, num_flows, switches):
         for i in range(num_flows):
             try:
@@ -68,4 +68,3 @@ class GroundTruthNetwork:
                     delay = self.sample_edge_delay(node, next_node)
                     print(f"  Link from {node} to {next_node} delay: {delay:.2f} ms")
                     time.sleep(delay / 1000.0)  
-
