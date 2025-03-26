@@ -2,7 +2,10 @@ import time
 import random
 import threading
 import networkx as nx
-from active_monitoring_evolution.edges_with_normal_distribution import one_edge_normal_params, two_edges_normal_params
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+from edges_with_normal_distribution import one_edge_normal_params, two_edges_normal_params
 from passive_monitoring.passive_monitoring_interface.switch_and_packet import Packet, Switch
 
 class GroundTruthNetwork:
