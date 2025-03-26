@@ -39,10 +39,11 @@ if delays:
     pred_pdf = norm.pdf(x, pred_mean, pred_std) if pred_mean is not None else None
 
     plt.figure(figsize=(10, 6))
-    plt.hist(delays, bins=30, density=True, alpha=0.5, label='Predicted Delay Histogram')
-    plt.plot(x, true_pdf, 'r-', linewidth=2, label='Ground Truth Distribution')
-    if pred_pdf is not None:
-        plt.plot(x, pred_pdf, 'b--', linewidth=2, label='Predicted Distribution')
+    (mu, sigma) = norm.fit(delays)
+    x = np.linspace(min(delays), max(delays), 1000)
+    fitted_pdf = norm.pdf(x, mu, sigma)
+    plt.plot(x, fitted_pdf, 'r--', label='Fitted Normal Distribution')
+    plt.plot(x, true_pdf, 'b-', linewidth=2, label='Ground Truth Distribution')
     plt.xlabel("Delay (seconds)")
     plt.ylabel("Density")
     plt.title("Comparison of Delay Distributions")

@@ -32,7 +32,7 @@ if delays:
     true_pdf = norm.pdf(x, true_mean, true_std)
     pred_pdf = norm.pdf(x, pred_mean, pred_std) if pred_mean is not None else None
     plt.figure(figsize=(10, 6))
-    plt.hist(delays, bins=30, density=True, alpha=0.5, label='Predicted Delay Histogram')
+    plt.hist(delays, bins=2, density=True, alpha=0.5, label='Predicted Delay Histogram')
     plt.plot(x, true_pdf, 'r-', linewidth=2, label='Ground Truth Distribution')
     if pred_pdf is not None:
         plt.plot(x, pred_pdf, 'b--', linewidth=2, label='Predicted Distribution')
