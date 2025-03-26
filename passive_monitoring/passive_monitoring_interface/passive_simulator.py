@@ -1,8 +1,9 @@
 import time
 import random
+import math
 from active_monitoring_evolution.ground_truth import GroundTruthNetwork
 
-class PassiveMonitoringInterface:
+class PassiveSimulator:
     def __init__(self, ground_truth_network: GroundTruthNetwork):
         self.network = ground_truth_network
         self.switches = {
@@ -120,3 +121,18 @@ class PassiveMonitoringInterface:
 
     def simulate_traffic(self, duration_seconds=10, avg_interarrival_ms=50):
         self.network.simulate_traffic(duration_seconds, avg_interarrival_ms)
+
+    def compare_distribution_parameters(self, pred_mean: float, pred_std: float) -> float:
+        params = self.network.get_distribution_parameters(self.network.SOURCE, self.network.DESTINATION)
+        actual_mean = params["mean"]
+        actual_std = params["std"]
+
+        kl_div = math.log(pred_std / actual_std) + ((actual_std**2 + (actual_mean - pred_mean)**2) / (2 * pred_std**2)) - 0.5
+        
+        # Aim for a KL divergence of <= 0.05
+        if kl_div <= 0.05:
+            print(f"KL divergence: {kl_div:.4f} ✅")
+        else:
+            print(f"KL divergence: {kl_div:.4f} ❌")
+        return kl_div
+
