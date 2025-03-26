@@ -120,7 +120,7 @@ for i in range(N):
 ingress_samples = ingress_hll.get_samples()
 egress_samples  = egress_hll.get_samples()
 
-hll_estimated_delay_ms = HLLSketch.passive_delay_estimation(ingress_samples, egress_samples)
+hll_estimated_delay_ms = HLLSketch.passive_delay_estimation(ingress_samples, egress_samples) / 1000
 
 actual_avg_delay_ms = np.mean(actual_delays)
 
