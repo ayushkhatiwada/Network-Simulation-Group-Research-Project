@@ -70,4 +70,3 @@ class GroundTruthNetwork:
             threading.Thread(target=self.transmit_packet, args=(packet,)).start()
             interarrival = random.expovariate(1.0 / avg_interarrival_ms)
             time.sleep(interarrival / 1000.0) 
-
