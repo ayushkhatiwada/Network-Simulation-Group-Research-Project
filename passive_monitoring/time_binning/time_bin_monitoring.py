@@ -5,11 +5,11 @@ from passive_monitoring.passive_monitoring_interface.passive_simulator import Pa
 from active_monitoring_evolution.ground_truth import GroundTruthNetwork
 
 class TimeBinMonitor:
-    def __init__(self, passive_simulator, bin_size=0.1):
+    def __init__(self, passive_simulator, bin_size, start_time):
         self.passive = passive_simulator
         self.bin_size = bin_size
-        self.source_sketch = TimeBinSketch(bin_size=bin_size)
-        self.dest_sketch = TimeBinSketch(bin_size=bin_size)
+        self.source_sketch = TimeBinSketch(start_time, bin_size)
+        self.dest_sketch = TimeBinSketch(start_time, bin_size)
 
     def enable_monitoring(self):
         original_transmit = self.passive.network.transmit_packet

@@ -119,11 +119,11 @@ class PassiveSimulator:
         switch.receive = modified_receive
         print(f"Enabled congestion simulation on switch {node_id}.")
 
-    def simulate_traffic(self, duration_seconds=10, avg_interarrival_ms=50):
+    def simulate_traffic(self, duration_seconds=10, avg_interarrival_ms=10):
         self.network.simulate_traffic(duration_seconds, avg_interarrival_ms)
 
     def compare_distribution_parameters(self, pred_mean: float, pred_std: float) -> float:
-        params = self.network.get_distribution_parameters(self.network.SOURCE, self.network.DESTINATION)
+        params = self.network.get_distribution_parameters()[0][2]
         actual_mean = params["mean"]
         actual_std = params["std"]
 

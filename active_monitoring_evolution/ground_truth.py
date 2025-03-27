@@ -24,10 +24,10 @@ class GroundTruthNetwork:
             "2": two_edges_normal_params
         }
         
-        selected_params = path_params.get(paths, one_edge_normal_params)
+        self.selected_params = path_params.get(paths, one_edge_normal_params)
         
         # Add the edges based on the selected parameters.
-        for u, v, params in selected_params:
+        for u, v, params in self.selected_params:
             self.graph.add_edge(u, v, **params)
 
     def sample_edge_delay(self, u, v):
@@ -53,7 +53,7 @@ class GroundTruthNetwork:
         time.sleep(delay / 1000.0)
         self.destination_switch.receive(packet)
 
-    def simulate_traffic(self, duration_seconds=10, avg_interarrival_ms=50):
+    def simulate_traffic(self, duration_seconds=10, avg_interarrival_ms=10):
         start_time = time.time()
         while time.time() - start_time < duration_seconds:
             packet = Packet(self.source_switch.switch_id, self.destination_switch.switch_id)
@@ -61,24 +61,5 @@ class GroundTruthNetwork:
             interarrival = random.expovariate(1.0 / avg_interarrival_ms)
             time.sleep(interarrival / 1000.0)
 
-    def get_distribution_parameters(self, u, v):
-        """
-        Compute and return the average delay parameters (mean and std) for edges connecting u and v.
-        This function aggregates the delay parameters from all edges between the given nodes.
-        
-        Returns:
-            dict: A dictionary with keys "mean" and "std".
-        """
-        edges = self.graph[u][v]
-        means = []
-        stds = []
-        for key in edges:
-            edge_data = edges[key]
-            means.append(edge_data.get('mean', 0))
-            stds.append(edge_data.get('std', 0))
-        if means:
-            avg_mean = sum(means) / len(means)
-            avg_std = sum(stds) / len(stds)
-        else:
-            avg_mean, avg_std = 0, 0
-        return {"mean": avg_mean, "std": avg_std}
+    def get_distribution_parameters(self):
+        return self.selected_params

@@ -32,7 +32,7 @@ if __name__ == '__main__':
     passive.enable_congestion_simulation(network.DESTINATION)
     
     # Create the time bin monitor with a bin size of 0.1 seconds.
-    tb_monitor = TimeBinMonitor(passive, bin_size=0.1)
+    tb_monitor = TimeBinMonitor(passive, bin_size=0.0001, start_time=time.time())
     tb_monitor.enable_monitoring()
     
     # Run the traffic simulation: simulate for 10 seconds with an average interarrival time of 100 ms.
@@ -62,13 +62,13 @@ if __name__ == '__main__':
 
     # Compute estimated delay stats from the cross-correlation curve.
     est_mean_delay, est_std_delay = compute_delay_stats_from_crosscorr(lag_times, corr)
+    est_mean_delay_ms = est_mean_delay * 1000
+    est_std_delay_ms = est_std_delay * 1000
+
     print("Estimated mean delay from cross-correlation (seconds):", est_mean_delay)
     print("Estimated std delay from cross-correlation (seconds):", est_std_delay)
     
     # --- Compare with the Underlying Normal Distribution ---
-    # Retrieve the actual distribution parameters from the ground truth network.
-    true_params = network.get_distribution_parameters(network.SOURCE, network.DESTINATION)
-    print("Underlying delay parameters:", true_params)
     # Compare the estimated parameters (predicted) to the actual ones using KL divergence.
     kl_div = passive.compare_distribution_parameters(est_mean_delay, est_std_delay)
     print("KL divergence:", kl_div)
