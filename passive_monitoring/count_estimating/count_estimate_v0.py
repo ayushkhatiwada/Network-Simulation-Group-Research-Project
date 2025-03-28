@@ -21,10 +21,10 @@ monitor.enable_monitoring(fluctuation_mean=true_mean, fluctuation_std=true_std)
 pred_mean, pred_std, delays = monitor.run_capture_loop_until_convergence(
     true_mean=true_mean,
     true_std=true_std,
-    kl_threshold=0.1,
+    kl_threshold=0.05,
     fluctuation_threshold=5,
     sim_duration=3,           
-    avg_interarrival_ms=100,    
+    avg_interarrival_ms=500,    
     max_duration=60         
 )
 
