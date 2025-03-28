@@ -6,10 +6,16 @@ from active_monitoring_evolution.edges_with_normal_distribution import one_edge_
 from passive_monitoring.passive_monitoring_interface.switch_and_packet import Packet, Switch
 
 class GroundTruthNetwork:
-    def __init__(self, paths="1"):
+    def __init__(self, paths="1", seed=None):
         """
         Initialise a network with a normal delay distribution.
+        
+        :param paths: Path configuration for the network.
+        :param seed: Random seed for reproducibility.
         """
+        # Create a local random number generator with the provided seed
+        self.rng = random.Random(seed)
+            
         self.graph = nx.MultiGraph()
         self.SOURCE = 1
         self.DESTINATION = 2
@@ -39,12 +45,12 @@ class GroundTruthNetwork:
             float: A positive delay value in milliseconds.
         """
         edges = self.graph[u][v]
-        selected_key = random.choice(list(edges.keys()))
+        selected_key = self.rng.choice(list(edges.keys()))
         edge_data = edges[selected_key]
         
         mean = edge_data['mean']
         std = edge_data['std']
-        delay = random.gauss(mean, std)
+        delay = self.rng.gauss(mean, std)
         return max(delay, 0.0)
 
     def transmit_packet(self, packet):

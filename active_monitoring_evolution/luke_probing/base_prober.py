@@ -41,6 +41,7 @@ class BaseProber:
             end_cpu_time = time.process_time()
             cpu_time = end_cpu_time - start_cpu_time
 
+            # these time slots have metrics
             self.metrics_per_timeslot.append((
                 second, 
                 new_mean, 

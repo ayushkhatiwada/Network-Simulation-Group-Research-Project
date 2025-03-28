@@ -114,7 +114,7 @@ class AdaptiveProber(BaseProber):
                 )
         
         if self.congestion_multiplier:
-            margin = 0.2  # 20% margin around learned multiplier
+            margin = 0.2 
             is_congested = (
                 p_value < (1 - self.confidence_level) and 
                 (self.congestion_multiplier * (1 - margin) <= current_ratio <= 
@@ -136,7 +136,6 @@ class AdaptiveProber(BaseProber):
         
         return is_congested
 
-    # Override get_metrics to include skipped probes
     def get_metrics(self) -> Dict[str, Any]:
         metrics = super().get_metrics()
         

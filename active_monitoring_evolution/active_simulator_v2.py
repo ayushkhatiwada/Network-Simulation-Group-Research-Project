@@ -12,8 +12,8 @@ class ActiveSimulator_v2(ActiveSimulator_v1):
     - Probes sent during congestion intervals have higher drop rate and increased delay.
     """
 
-    def __init__(self, paths="1") -> None:
-        super().__init__(paths)
+    def __init__(self, paths="1", seed=None) -> None:
+        super().__init__(paths, seed=seed)
 
         # Congestion parameters
         self.normal_drop_probability = 0.1
@@ -27,7 +27,6 @@ class ActiveSimulator_v2(ActiveSimulator_v1):
     def send_probe_at(self, departure_time: float) -> float:
         """
         Send a probe at a given time.
-        
         - Checks if depature time is in a congestion interval.
         - Applies drop probability and delay factor accordingly.
         - Returns delay or None if dropped.
@@ -45,7 +44,7 @@ class ActiveSimulator_v2(ActiveSimulator_v1):
         # Increment probe count for this second
         self.probe_count_per_second[time_slot] = self.probe_count_per_second.get(time_slot, 0) + 1
 
-        # Check if we are in a congested time period, increase drop probability if we are
+        # Check if we are in a congested time period
         congested = any(start <= departure_time <= end for start, end in self.congestion_intervals)
         if congested:
             state = "congested"
@@ -54,8 +53,8 @@ class ActiveSimulator_v2(ActiveSimulator_v1):
             state = "normal"
             drop_prob = self.normal_drop_probability
 
-        # Decide if probe should be dropped depending on self.drop_probability
-        if random.random() < drop_prob:
+        # Decide if probe should be dropped using local rng
+        if self.rng.random() < drop_prob:
             self.event_log.append((departure_time, None, None))
             print(f"[Drop] Probe at {departure_time:.2f} s dropped ({state}).")
             return None
@@ -86,12 +85,12 @@ class ActiveSimulator_v2(ActiveSimulator_v1):
         Returns list of (start, end) tuples representing the congestion time periods
         """
         something = [0x5, 0xA, 0xF, 0x14]
-        random.shuffle(something)
+        self.rng.shuffle(something)  # Use local rng instead of global random
         total_congested_time = sum(something)
         total_simulation_time = self.max_departure_time
         total_non_congested_time = total_simulation_time - total_congested_time
         num_of_non_congestion_intervals = len(something) + 1
-        weights = [random.random() for _ in range(num_of_non_congestion_intervals)]
+        weights = [self.rng.random() for _ in range(num_of_non_congestion_intervals)]
         weight_sum = sum(weights)
         non_congested_durations = [(w / weight_sum) * total_non_congested_time for w in weights]
         congestion_intervals = []

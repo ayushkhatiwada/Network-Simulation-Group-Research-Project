@@ -11,22 +11,26 @@ class ActiveSimulator_v3(ActiveSimulator_v2):
     - Maintains the same congestion intervals from v2
     """
 
-    def __init__(self, paths="1", max_intensity=5.0, seed=42) -> None:
-        super().__init__(paths)
+    def __init__(self, max_departure_time=100, paths="1", max_intensity=5.0, seed=None) -> None:
+        # Pass seed to parent class to ensure consistent congestion intervals
+        super().__init__(paths=paths, seed=seed)
         
+        # Store max_departure_time if provided
+        if max_departure_time != 100:
+            self.max_departure_time = max_departure_time
+            
         # Congestion intensity parameters
         self.max_intensity = max_intensity
-        self.seed = seed
         
+        # Generate intensities for congestion intervals
         self.congestion_intensities = self._generate_congestion_intensities()
 
     def _generate_congestion_intensities(self):
-
-        # use seed for reproducibility / comparisons
-        # generate intensity for each congestion interval
-        # higher intensity = more drop probability
-        rng = random.Random(self.seed)
-        return {i: rng.uniform(1.5, self.max_intensity) 
+        """
+        Generate intensities for each congestion interval using the seeded RNG.
+        """
+        # Use the local RNG (set up in parent class) for consistent results
+        return {i: self.rng.uniform(1.5, self.max_intensity) 
                 for i in range(len(self.congestion_intervals))}
     
     def send_probe_at(self, departure_time: float) -> float:
@@ -68,8 +72,8 @@ class ActiveSimulator_v3(ActiveSimulator_v2):
             state = "normal"
             drop_prob = self.normal_drop_probability
 
-        # Check for packet drop
-        if random.random() < drop_prob:
+        # Check for packet drop using the local RNG
+        if self.rng.random() < drop_prob:
             self.event_log.append((departure_time, None, None))
             print(f"[Drop] Probe at {departure_time:.2f} s dropped ({state}).")
             return None

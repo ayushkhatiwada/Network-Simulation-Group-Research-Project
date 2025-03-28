@@ -7,8 +7,8 @@ class ActiveSimulator_v1(ActiveSimulator_v0):
     """
     Extends ActiveSimulator_v0 to simulate packet drops using a fixed drop probability.
     """
-    def __init__(self, paths="1") -> None:
-        super().__init__(paths)
+    def __init__(self, paths="1", seed=None) -> None:
+        super().__init__(paths, seed=seed)
         self.drop_probability = 0.1  # 10% chance of a packet being dropped
 
 
@@ -35,8 +35,8 @@ class ActiveSimulator_v1(ActiveSimulator_v0):
         # Increment probe count for this second
         self.probe_count_per_second[time_slot] = self.probe_count_per_second.get(time_slot, 0) + 1
 
-        # Decide if probe should be dropped depending on self.drop_probability
-        if random.random() < self.drop_probability:
+        # Decide if probe should be dropped using local rng
+        if self.rng.random() < self.drop_probability:
             self.event_log.append((departure_time, None, None))
             print(f"[Drop] Probe sent at {departure_time:.2f} s was dropped")
             return None
