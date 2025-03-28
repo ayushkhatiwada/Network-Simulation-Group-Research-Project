@@ -2,7 +2,7 @@ import time
 import numpy as np
 from passive_monitoring.passive_monitoring_interface.passive_simulator import PassiveSimulator
 from active_monitoring_evolution.ground_truth import GroundTruthNetwork
-from passive_monitoring.end_host_latency_measurement import EndHostEstimation
+from passive_monitoring.end_host.end_host_latency_measurement import EndHostEstimation
 from passive_monitoring.passive_monitoring_interface.switch_and_packet import Packet
 
 def evolution_0_find_optimal_window(min_window_size=100, max_window_size=1000, window_increment=100, apply_filtering=True, discard_method="median_filter"):

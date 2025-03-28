@@ -26,7 +26,7 @@ if __name__ == '__main__':
     # Configure ConQuest-based monitoring.
     # -------------------------------
     # Choose a snapshot window T (e.g., 1 ms).
-    T = 0.0001  # seconds per snapshot
+    T = 0.000001  # seconds per snapshot
     start_time = time.time()
     monitor = ConQuestMonitor(passive, T, start_time)
     monitor.enable_monitoring()

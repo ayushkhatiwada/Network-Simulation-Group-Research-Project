@@ -19,8 +19,8 @@ if __name__ == '__main__':
     tb_monitor.enable_monitoring()
     
     # Simulate traffic.
-    simulation_duration = 100  
-    avg_interarrival_ms = 20  
+    simulation_duration = 100
+    avg_interarrival_ms = 20
     passive.simulate_traffic(duration_seconds=simulation_duration, avg_interarrival_ms=avg_interarrival_ms)
     
     # Retrieve histograms.
@@ -30,8 +30,8 @@ if __name__ == '__main__':
     dest_sliding_hist = tb_monitor.get_destination_sliding_histogram()
     
     # Estimate delays using original matching
-    window_size = 10 
-    alpha = 1       
+    window_size = 9
+    alpha = 2
     cost_function = 'exponential'
     
     estimator = DelayDistributionEstimator()

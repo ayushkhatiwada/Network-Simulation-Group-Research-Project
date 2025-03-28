@@ -36,7 +36,7 @@ if __name__ == '__main__':
     
 
     # estimate delays using robust matching and fallback for drop scenarios to handle missing events
-    window_size = 10 
+    window_size = 10
     alpha = 1              # weighting parameter
     cost_function = 'exponential'
     smooth_kernel = 3      # smoothing kernel size
