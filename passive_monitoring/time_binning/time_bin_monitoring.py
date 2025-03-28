@@ -12,7 +12,7 @@ class TimeBinMonitor:
         self.source_sketch = TimeBinSketch(start_time, bin_size)
         self.dest_sketch = TimeBinSketch(start_time, bin_size)
         
-        # Sliding sketches: we use an offset (here half the bin size).
+        # Sliding sketches: we use an offset (half the bin size).
         self.sliding_offset = bin_size / 2
         self.source_sliding_sketch = TimeBinSketch(start_time + self.sliding_offset, bin_size)
         self.dest_sliding_sketch = TimeBinSketch(start_time + self.sliding_offset, bin_size)
