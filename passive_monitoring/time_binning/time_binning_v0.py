@@ -1,75 +1,104 @@
 import time
-import random
 import matplotlib.pyplot as plt
 import numpy as np
-from passive_monitoring.time_binning.time_bin_sketch import TimeBinSketch
-from passive_monitoring.time_binning.time_bin_monitoring import TimeBinMonitor
+from scipy.stats import norm
+
 from passive_monitoring.passive_monitoring_interface.passive_simulator import PassiveSimulator
 from active_monitoring_evolution.ground_truth import GroundTruthNetwork
+from passive_monitoring.time_binning.time_bin_monitoring import TimeBinMonitor
+from passive_monitoring.time_binning.delay_estimator import DelayDistributionEstimator
 
-
-# if __name__ == '__main__':
+if __name__ == '__main__':
     network = GroundTruthNetwork(paths="1")
     passive = PassiveSimulator(network)
     
-    tb_monitor = TimeBinMonitor(passive, bin_size=0.1)
+    # Configure time-bin monitoring.
+    bin_size = 0.0001 
+    start_time = time.time()
+    tb_monitor = TimeBinMonitor(passive, bin_size, start_time)
     tb_monitor.enable_monitoring()
     
-    passive.simulate_traffic(duration_seconds=10, avg_interarrival_ms=100)
+    # Simulate traffic.
+    simulation_duration = 100  
+    avg_interarrival_ms = 20  
+    passive.simulate_traffic(duration_seconds=simulation_duration, avg_interarrival_ms=avg_interarrival_ms)
     
+    # Retrieve histograms.
     source_hist = tb_monitor.get_source_histogram()
     dest_hist = tb_monitor.get_destination_histogram()
-    print("Source (sent) histogram (bin -> count):", source_hist)
-    print("Destination (received) histogram (bin -> count):", dest_hist)
+    source_sliding_hist = tb_monitor.get_source_sliding_histogram()
+    dest_sliding_hist = tb_monitor.get_destination_sliding_histogram()
     
-    # --- Estimate the Delay Distribution via Cross-correlation ---
-    # Convert the histograms (dictionaries) to arrays over a common range.
-    all_bins = set(source_hist.keys()) | set(dest_hist.keys())
-    max_bin = max(all_bins)
-    source_arr = np.zeros(max_bin+1)
-    dest_arr = np.zeros(max_bin+1)
-    for b, count in source_hist.items():
-        source_arr[b] = count
-    for b, count in dest_hist.items():
-        dest_arr[b] = count
+    # Estimate delays using original matching
+    window_size = 10 
+    alpha = 1       
+    cost_function = 'exponential'
+    
+    estimator = DelayDistributionEstimator()
+    estimator.update_from_histograms(source_hist, dest_hist, bin_size, window_size, alpha, cost_function, use_fallback=False)
+    estimator.update_from_histograms(source_sliding_hist, dest_sliding_hist, bin_size, window_size, alpha, cost_function, use_fallback=False)
+    
+    delays = estimator.get_all_delays()
+    delays_ms = [d * 1000 for d in delays]
 
-    # Compute cross-correlation between destination and source arrays.
-    corr = np.correlate(dest_arr, source_arr, mode='full')
-    lags = np.arange(-len(source_arr)+1, len(source_arr))
-    lag_times = lags * tb_monitor.bin_size
 
-    # The lag corresponding to the maximum correlation is the estimated average delay.
-    max_corr_idx = np.argmax(corr)
-    estimated_shift_bins = lags[max_corr_idx]
-    estimated_delay = estimated_shift_bins * tb_monitor.bin_size
-    print("Estimated average delay (seconds):", estimated_delay)
     
-    # --- Graphing the Data ---
-    source_bins = sorted(source_hist.keys())
-    source_time_bins = [b * tb_monitor.bin_size for b in source_bins]
-    source_counts = [source_hist[b] for b in source_bins]
     
-    dest_bins = sorted(dest_hist.keys())
-    dest_time_bins = [b * tb_monitor.bin_size for b in dest_bins]
-    dest_counts = [dest_hist[b] for b in dest_bins]
+    # if delays_ms:
+    #     mu_ms, std_ms = norm.fit(delays_ms)
+    #     print("Normal fit parameters (ms):", mu_ms, std_ms)
+    #     kl_div = passive.compare_distribution_parameters(mu_ms, std_ms)
+    #     print("KL divergence:", kl_div)
+    #     xmin, xmax = plt.xlim()
+    #     x = np.linspace(xmin, xmax, 100)
+    #     pdf = norm.pdf(x, mu_ms, std_ms)
+    #     plt.plot(x, pdf, 'r', linewidth=2,
+    #              label=f'Normal Fit\nμ={mu_ms:.4f} ms, σ={std_ms:.4f} ms')
+    #     plt.legend()
+    # plt.show()
+
+    if not delays_ms:
+        print("No delay data was computed.")
+        exit()
     
-    plt.figure(figsize=(14, 8))
+    # -------------------------------
+    # Fit normal distribution to estimated delays.
+    # -------------------------------
+    est_mu, est_std = norm.fit(delays_ms)
+    print("Estimated normal fit parameters (ms):", est_mu, est_std)
+    kl_div = passive.compare_distribution_parameters(est_mu, est_std)
+    print("KL divergence:", kl_div)
     
-    # Plot Source and Destination Histograms.
-    plt.subplot(2, 1, 1)
-    plt.bar(source_time_bins, source_counts, width=tb_monitor.bin_size*0.8, color='skyblue', align='edge', label='Source (Sent)')
-    plt.bar(dest_time_bins, dest_counts, width=tb_monitor.bin_size*0.8, color='salmon', align='edge', label='Destination (Received)', alpha=0.7)
-    plt.xlabel("Time (seconds)")
-    plt.ylabel("Packet Count")
-    plt.title("Source and Destination Histograms (No Packet Drops)")
+    # -------------------------------
+    # Get the underlying true distribution from the network.
+    # -------------------------------
+    # network.get_distribution_parameters()[0][2] returns a dictionary with keys "mean" and "std" (in ms)
+    true_params = network.get_distribution_parameters()[0][2]
+    true_mu = true_params["mean"]
+    true_std = true_params["std"]
+    print("True underlying distribution parameters (ms):", true_mu, true_std)
+    
+    # -------------------------------
+    # Prepare x-axis values for plotting.
+    # -------------------------------
+    lower_bound = min(est_mu - 4*est_std, true_mu - 4*true_std)
+    upper_bound = max(est_mu + 4*est_std, true_mu + 4*true_std)
+    x = np.linspace(lower_bound, upper_bound, 200)
+    
+    # Compute PDFs.
+    est_pdf = norm.pdf(x, est_mu, est_std)
+    true_pdf = norm.pdf(x, true_mu, true_std)
+    
+    # -------------------------------
+    # Plot both PDFs on the same graph.
+    # -------------------------------
+    plt.figure(figsize=(8, 5))
+    plt.plot(x, est_pdf, 'r-', linewidth=2,
+             label=f'Estimated Normal\nμ={est_mu:.4f} ms, σ={est_std:.4f} ms')
+    plt.plot(x, true_pdf, 'b--', linewidth=2,
+             label=f'True Normal\nμ={true_mu:.4f} ms, σ={true_std:.4f} ms')
+    plt.xlabel("Delay (ms)")
+    plt.ylabel("Probability Density")
+    plt.title("Estimated vs. True Delay Distributions")
     plt.legend()
-    
-    # Plot the cross-correlation curve to estimate delay.
-    plt.subplot(2, 1, 2)
-    plt.stem(lag_times, corr) 
-    plt.xlabel("Delay (seconds)")
-    plt.ylabel("Cross-correlation")
-    plt.title("Cross-correlation (Estimated Delay Distribution)")
-    
-    plt.tight_layout()
     plt.show()
