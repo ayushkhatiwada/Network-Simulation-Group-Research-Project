@@ -40,22 +40,65 @@ if __name__ == '__main__':
     
     delays = estimator.get_all_delays()
     delays_ms = [d * 1000 for d in delays]
+
+
     
+    
+    # if delays_ms:
+    #     mu_ms, std_ms = norm.fit(delays_ms)
+    #     print("Normal fit parameters (ms):", mu_ms, std_ms)
+    #     kl_div = passive.compare_distribution_parameters(mu_ms, std_ms)
+    #     print("KL divergence:", kl_div)
+    #     xmin, xmax = plt.xlim()
+    #     x = np.linspace(xmin, xmax, 100)
+    #     pdf = norm.pdf(x, mu_ms, std_ms)
+    #     plt.plot(x, pdf, 'r', linewidth=2,
+    #              label=f'Normal Fit\nμ={mu_ms:.4f} ms, σ={std_ms:.4f} ms')
+    #     plt.legend()
+    # plt.show()
+
+    if not delays_ms:
+        print("No delay data was computed.")
+        exit()
+    
+    # -------------------------------
+    # Fit normal distribution to estimated delays.
+    # -------------------------------
+    est_mu, est_std = norm.fit(delays_ms)
+    print("Estimated normal fit parameters (ms):", est_mu, est_std)
+    kl_div = passive.compare_distribution_parameters(est_mu, est_std)
+    print("KL divergence:", kl_div)
+    
+    # -------------------------------
+    # Get the underlying true distribution from the network.
+    # -------------------------------
+    # network.get_distribution_parameters()[0][2] returns a dictionary with keys "mean" and "std" (in ms)
+    true_params = network.get_distribution_parameters()[0][2]
+    true_mu = true_params["mean"]
+    true_std = true_params["std"]
+    print("True underlying distribution parameters (ms):", true_mu, true_std)
+    
+    # -------------------------------
+    # Prepare x-axis values for plotting.
+    # -------------------------------
+    lower_bound = min(est_mu - 4*est_std, true_mu - 4*true_std)
+    upper_bound = max(est_mu + 4*est_std, true_mu + 4*true_std)
+    x = np.linspace(lower_bound, upper_bound, 200)
+    
+    # Compute PDFs.
+    est_pdf = norm.pdf(x, est_mu, est_std)
+    true_pdf = norm.pdf(x, true_mu, true_std)
+    
+    # -------------------------------
+    # Plot both PDFs on the same graph.
+    # -------------------------------
     plt.figure(figsize=(8, 5))
-    plt.hist(delays_ms, bins=20, density=True, alpha=0.6, edgecolor='black')
+    plt.plot(x, est_pdf, 'r-', linewidth=2,
+             label=f'Estimated Normal\nμ={est_mu:.4f} ms, σ={est_std:.4f} ms')
+    plt.plot(x, true_pdf, 'b--', linewidth=2,
+             label=f'True Normal\nμ={true_mu:.4f} ms, σ={true_std:.4f} ms')
     plt.xlabel("Delay (ms)")
     plt.ylabel("Probability Density")
-    plt.title("Delay Distribution (No Drops, Weighted Matching)")
-    
-    if delays_ms:
-        mu_ms, std_ms = norm.fit(delays_ms)
-        print("Normal fit parameters (ms):", mu_ms, std_ms)
-        kl_div = passive.compare_distribution_parameters(mu_ms, std_ms)
-        print("KL divergence:", kl_div)
-        xmin, xmax = plt.xlim()
-        x = np.linspace(xmin, xmax, 100)
-        pdf = norm.pdf(x, mu_ms, std_ms)
-        plt.plot(x, pdf, 'r', linewidth=2,
-                 label=f'Normal Fit\nμ={mu_ms:.4f} ms, σ={std_ms:.4f} ms')
-        plt.legend()
+    plt.title("Estimated vs. True Delay Distributions")
+    plt.legend()
     plt.show()
