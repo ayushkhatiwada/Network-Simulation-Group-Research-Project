@@ -9,60 +9,53 @@ from passive_monitoring.time_binning.time_bin_monitoring import TimeBinMonitor
 from passive_monitoring.time_binning.delay_estimator import DelayDistributionEstimator
 
 if __name__ == '__main__':
-    # Set up the ground truth network and passive simulator.
     network = GroundTruthNetwork(paths="1")
     passive = PassiveSimulator(network)
     
-    # Configure the time-bin monitoring system.
-    bin_size = 0.0001  # seconds per bin
+    # Configure time-bin monitoring.
+    bin_size = 0.0001 
     start_time = time.time()
     tb_monitor = TimeBinMonitor(passive, bin_size, start_time)
     tb_monitor.enable_monitoring()
     
     # Simulate traffic.
-    simulation_duration = 100  # seconds
-    avg_interarrival_ms = 20
+    simulation_duration = 100  
+    avg_interarrival_ms = 20  
     passive.simulate_traffic(duration_seconds=simulation_duration, avg_interarrival_ms=avg_interarrival_ms)
     
-    # Retrieve histograms from both the discrete and sliding sketches.
+    # Retrieve histograms.
     source_hist = tb_monitor.get_source_histogram()
     dest_hist = tb_monitor.get_destination_histogram()
     source_sliding_hist = tb_monitor.get_source_sliding_histogram()
     dest_sliding_hist = tb_monitor.get_destination_sliding_histogram()
     
-    # Define matching parameters.
-    window_size = 10  # in bin units; adjust as needed
-    alpha = 1         # weighting parameter; adjust to penalize larger differences
-    cost_function = 'exponential'  # or 'quadratic'
+    # Estimate delays using original matching
+    window_size = 10 
+    alpha = 1       
+    cost_function = 'exponential'
     
-    # Create a DelayDistributionEstimator and update it using both histogram pairs.
     estimator = DelayDistributionEstimator()
-    estimator.update_from_histograms(source_hist, dest_hist, bin_size, window_size, alpha, cost_function)
-    estimator.update_from_histograms(source_sliding_hist, dest_sliding_hist, bin_size, window_size, alpha, cost_function)
+    estimator.update_from_histograms(source_hist, dest_hist, bin_size, window_size, alpha, cost_function, use_fallback=False)
+    estimator.update_from_histograms(source_sliding_hist, dest_sliding_hist, bin_size, window_size, alpha, cost_function, use_fallback=False)
     
-    # Retrieve delay values and convert to milliseconds.
     delays = estimator.get_all_delays()
     delays_ms = [d * 1000 for d in delays]
     
-    # Plot the combined delay distribution histogram.
     plt.figure(figsize=(8, 5))
-    n, bins, patches = plt.hist(delays_ms, bins=20, density=True, alpha=0.6, edgecolor='black')
-    plt.xlabel('Delay (ms)')
-    plt.ylabel('Probability Density')
-    plt.title('Combined Delay Distribution with Weighted Dynamic Matching')
+    plt.hist(delays_ms, bins=20, density=True, alpha=0.6, edgecolor='black')
+    plt.xlabel("Delay (ms)")
+    plt.ylabel("Probability Density")
+    plt.title("Delay Distribution (No Drops, Weighted Matching)")
     
-    # Fit a normal distribution to the delays (if any) and compare with ground truth.
     if delays_ms:
         mu_ms, std_ms = norm.fit(delays_ms)
         print("Normal fit parameters (ms):", mu_ms, std_ms)
         kl_div = passive.compare_distribution_parameters(mu_ms, std_ms)
         print("KL divergence:", kl_div)
-        
         xmin, xmax = plt.xlim()
         x = np.linspace(xmin, xmax, 100)
-        p = norm.pdf(x, mu_ms, std_ms)
-        plt.plot(x, p, 'r', linewidth=2,
-                 label=f'Normal Fit\nμ={mu_ms:.4f} ms\nσ={std_ms:.4f} ms')
+        pdf = norm.pdf(x, mu_ms, std_ms)
+        plt.plot(x, pdf, 'r', linewidth=2,
+                 label=f'Normal Fit\nμ={mu_ms:.4f} ms, σ={std_ms:.4f} ms')
         plt.legend()
-    
     plt.show()

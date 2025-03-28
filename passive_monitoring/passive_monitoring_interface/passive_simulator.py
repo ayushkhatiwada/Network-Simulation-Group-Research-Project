@@ -40,7 +40,7 @@ class PassiveSimulator:
             arrival_time = time.time()
             if random.random() < drop_probability:
                 self.event_log.append((arrival_time, None, None))
-                print(f"[Drop] Packet {packet} dropped at switch {node_id} at {arrival_time:.2f} s.")
+                #print(f"[Drop] Packet {packet} dropped at switch {node_id} at {arrival_time:.2f} s.")
             else:
                 processed_time = time.time()
                 delay = processed_time - arrival_time
@@ -105,7 +105,7 @@ class PassiveSimulator:
             arrival_time = time.time()
             if random.random() < drop_prob:
                 self.event_log.append((rel_time, None, None))
-                print(f"[Drop] Packet {packet} dropped at switch {node_id} at {rel_time:.2f} s ({state}).")
+                #print(f"[Drop] Packet {packet} dropped at switch {node_id} at {rel_time:.2f} s ({state}).")
             else:
                 # If congested, simulate additional delay.
                 if delay_factor > 1.0:
