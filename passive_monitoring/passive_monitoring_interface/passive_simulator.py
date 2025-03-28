@@ -135,4 +135,3 @@ class PassiveSimulator:
         else:
             print(f"KL divergence: {kl_div:.4f} ❌")
         return kl_div
-

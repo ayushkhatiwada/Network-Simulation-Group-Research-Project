@@ -19,4 +19,4 @@ class Switch:
     def receive(self, packet):
         for s in self.sketches:
             s.process_packet(packet, self.switch_id)
-        print(f"[{time.strftime('%H:%M:%S')}] Switch {self.switch_id} received {packet}")
+        #print(f"[{time.strftime('%H:%M:%S')}] Switch {self.switch_id} received {packet}")
