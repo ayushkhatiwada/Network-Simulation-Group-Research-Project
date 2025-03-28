@@ -10,7 +10,6 @@ class PassiveSimulator:
             self.network.SOURCE: self.network.source_switch,
             self.network.DESTINATION: self.network.destination_switch
         }
-        # Event log: each entry is a tuple (arrival_time, processed_time, delay), for dropped packets both are None.
         self.event_log = []
         
         # Congestion simulation parameters.
@@ -19,8 +18,11 @@ class PassiveSimulator:
         self.congested_drop_probability = 0.4
         self.congestion_delay_factor = 1.5 
         
-        self.congestion_intervals = []  # list of (start, end) times (relative seconds)
+        self.congestion_intervals = []  # List of (start, end) times (relative seconds)
         self.simulation_start_time = None
+        
+        # For variable congestion, we add intensities.
+        self.congestion_intensities = {}  # Dict mapping congestion interval index to intensity
 
     def attach_sketch(self, node_id, sketch):
         if node_id in self.switches:
@@ -40,7 +42,6 @@ class PassiveSimulator:
             arrival_time = time.time()
             if random.random() < drop_probability:
                 self.event_log.append((arrival_time, None, None))
-                #print(f"[Drop] Packet {packet} dropped at switch {node_id} at {arrival_time:.2f} s.")
             else:
                 processed_time = time.time()
                 delay = processed_time - arrival_time
@@ -77,13 +78,15 @@ class PassiveSimulator:
         return congestion_intervals
 
     def enable_congestion_simulation(self, node_id):
+        """
+        Enable congestion simulation (fixed intensity).
+        """
         if node_id not in self.switches:
             raise ValueError(f"No switch found for node id {node_id}.")
         
-        # Set simulation start time and generate congestion intervals.
         self.simulation_start_time = time.time()
         self.congestion_intervals = self._generate_congestion_intervals()
-        print("Generated congestion intervals (relative to simulation start):")
+        print("Generated congestion intervals (fixed intensity):")
         for start, end in self.congestion_intervals:
             print(f"  {start:.2f} s to {end:.2f} s")
         
@@ -101,13 +104,10 @@ class PassiveSimulator:
                 drop_prob = self.normal_drop_probability
                 delay_factor = 1.0
                 state = "normal"
-
             arrival_time = time.time()
             if random.random() < drop_prob:
                 self.event_log.append((rel_time, None, None))
-                #print(f"[Drop] Packet {packet} dropped at switch {node_id} at {rel_time:.2f} s ({state}).")
             else:
-                # If congested, simulate additional delay.
                 if delay_factor > 1.0:
                     extra_delay = (delay_factor - 1.0) * 0.01
                     time.sleep(extra_delay)
@@ -115,9 +115,69 @@ class PassiveSimulator:
                 measured_delay = processed_time - arrival_time
                 self.event_log.append((rel_time, processed_time - self.simulation_start_time, measured_delay))
                 original_receive(packet)
-        
         switch.receive = modified_receive
         print(f"Enabled congestion simulation on switch {node_id}.")
+
+    def enable_variable_congestion_simulation(self, node_id, max_intensity=5.0, seed=42):
+        """
+        Enable congestion simulation with variable intensity.
+        
+        - Generates congestion intervals (as in fixed congestion).
+        - For each interval, generates an intensity value in [1.5, max_intensity] (using the given seed).
+        - In the modified receive function, during congestion the drop probability is scaled by the interval's intensity (capped at 95%).
+        """
+        if node_id not in self.switches:
+            raise ValueError(f"No switch found for node id {node_id}.")
+        
+        # Set simulation start time and generate congestion intervals.
+        self.simulation_start_time = time.time()
+        self.congestion_intervals = self._generate_congestion_intervals()
+        
+        # Generate congestion intensities for each interval.
+        rng = random.Random(seed)
+        self.congestion_intensities = {i: rng.uniform(1.5, max_intensity) for i in range(len(self.congestion_intervals))}
+        
+        print("Generated congestion intervals with variable intensity:")
+        for i, (start, end) in enumerate(self.congestion_intervals):
+            intensity = self.congestion_intensities[i]
+            print(f"  Interval {i}: {start:.2f} s to {end:.2f} s, Intensity: {intensity:.2f}")
+        
+        switch = self.switches[node_id]
+        original_receive = switch.receive
+
+        def modified_receive(packet):
+            rel_time = time.time() - self.simulation_start_time
+            congested = False
+            intensity = 1.0
+            # Determine if we are in a congestion interval and get its intensity.
+            for i, (start, end) in enumerate(self.congestion_intervals):
+                if start <= rel_time <= end:
+                    congested = True
+                    intensity = self.congestion_intensities[i]
+                    break
+            if congested:
+                state = f"congested (intensity: {intensity:.2f})"
+                # Scale drop probability by intensity, but cap at 95%
+                drop_prob = min(0.95, self.congested_drop_probability * intensity)
+                delay_factor = self.congestion_delay_factor
+            else:
+                state = "normal"
+                drop_prob = self.normal_drop_probability
+                delay_factor = 1.0
+            arrival_time = time.time()
+            if random.random() < drop_prob:
+                self.event_log.append((rel_time, None, None))
+                print(f"[Drop] Packet {packet} dropped at switch {node_id} at {rel_time:.2f} s ({state}).")
+            else:
+                if delay_factor > 1.0:
+                    extra_delay = (delay_factor - 1.0) * 0.01
+                    time.sleep(extra_delay)
+                processed_time = time.time()
+                measured_delay = processed_time - arrival_time
+                self.event_log.append((rel_time, processed_time - self.simulation_start_time, measured_delay))
+                original_receive(packet)
+        switch.receive = modified_receive
+        print(f"Enabled variable congestion simulation on switch {node_id}.")
 
     def simulate_traffic(self, duration_seconds=10, avg_interarrival_ms=10):
         self.network.simulate_traffic(duration_seconds, avg_interarrival_ms)
@@ -126,10 +186,7 @@ class PassiveSimulator:
         params = self.network.get_distribution_parameters()[0][2]
         actual_mean = params["mean"]
         actual_std = params["std"]
-
         kl_div = math.log(pred_std / actual_std) + ((actual_std**2 + (actual_mean - pred_mean)**2) / (2 * pred_std**2)) - 0.5
-        
-        # Aim for a KL divergence of <= 0.05
         if kl_div <= 0.05:
             print(f"KL divergence: {kl_div:.4f} ✅")
         else:
