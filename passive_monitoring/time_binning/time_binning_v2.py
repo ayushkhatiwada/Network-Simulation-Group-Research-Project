@@ -1,7 +1,7 @@
 import time
 import matplotlib.pyplot as plt
 import numpy as np
-from scipy.stats import norm, truncnorm
+from scipy.stats import norm
 from scipy import signal
 import random
 
@@ -10,240 +10,174 @@ from active_monitoring_evolution.ground_truth import GroundTruthNetwork
 from passive_monitoring.time_binning.time_bin_monitoring import TimeBinMonitor
 from passive_monitoring.time_binning.delay_estimator import DelayDistributionEstimator, compute_global_offset
 
-def extract_cross_correlation_delay(source_hist, dest_hist, bin_size):
+def extract_delays_with_early_exit(source_hist, dest_hist, source_sliding, dest_sliding, bin_size, 
+                                  kl_threshold=0.05):
     """
-    Extract delay using cross-correlation method.
+    Extract delays by tuning only the alpha and window size parameters.
+    Stops processing when KL threshold is met.
+    
+    Args:
+        source_hist, dest_hist: Source and destination histograms
+        source_sliding, dest_sliding: Sliding window histograms
+        bin_size: Size of time bins in seconds
+        kl_threshold: Exit early when this KL divergence is reached
+        
+    Returns:
+        raw_delays: List of delay values from the best parameter combination
+        best_params: Dictionary with the best parameter values
     """
-    print("Extracting delay using cross-correlation...")
+    print(f"\nTuning alpha and window size parameters (target KL: {kl_threshold:.4f})...")
     
-    if not source_hist or not dest_hist:
-        return None
+    # Define parameter search grid
+    window_sizes = [7, 9, 11]
+    alphas = [0.5, 1.0]
+    cost_functions = ['exponential']
+    kernels = [3, 5, 7]
+    use_fallbacks = [True, False]
     
-    all_bins = set(source_hist.keys()) | set(dest_hist.keys())
-    min_bin = min(all_bins)
-    max_bin = max(all_bins)
-    length = max_bin - min_bin + 1
+    # Track the best combination found
+    best_delays = []
+    best_kl = float('inf')
+    best_params = None
     
-    source_arr = np.zeros(length)
-    dest_arr = np.zeros(length)
+    print("Testing parameter combinations on regular histograms:")
     
-    for b, count in source_hist.items():
-        if b - min_bin < length:
-            source_arr[b - min_bin] = count
+    # Early exit flag
+    target_reached = False
     
-    for b, count in dest_hist.items():
-        if b - min_bin < length:
-            dest_arr[b - min_bin] = count
-    
-    # Calculate cross-correlation
-    corr = np.correlate(dest_arr, source_arr, mode='full')
-    lags = np.arange(-len(source_arr) + 1, len(source_arr))
-    
-    # Find the peak
-    max_corr_idx = np.argmax(corr)
-    lag = lags[max_corr_idx]
-    
-    # Convert to ms
-    delay_ms = lag * bin_size * 1000
-    
-    # Ensure positive delay
-    if delay_ms < 0:
-        print(f"Warning: Cross-correlation produced negative delay ({delay_ms:.4f}ms), using absolute value")
-        delay_ms = abs(delay_ms)
-    
-    print(f"Cross-correlation delay: {delay_ms:.4f}ms")
-    return delay_ms
-
-def truly_blind_estimation(source_hist, dest_hist, source_sliding, dest_sliding, bin_size, measured_drop_rate, passive):
-    """
-    Truly blind estimation with no assumptions about the true distribution.
-    Works with both fixed drops and congestion.
-    """
-    print("Starting truly blind delay estimation...")
-    
-    # Step 1: Extract raw delays from histograms
-    raw_delays = []
-    print("Extracting delays with multiple parameter combinations...")
-    
-    # Try multiple combinations of window sizes and alpha values 
-    window_sizes = [5, 10, 15, 20]
-    alphas = [1.0, 2.0]
-    
+    # Try with regular histograms first
     for window_size in window_sizes:
-        for alpha in alphas:
-            try:
-                # Use both regular and sliding histograms
-                for use_fallback in [True, False]:
-                    estimator = DelayDistributionEstimator()
-                    
-                    # Process regular histogram
-                    estimator.update_from_histograms(
-                        source_hist, dest_hist, bin_size, window_size, 
-                        alpha, 'exponential', use_fallback, smooth_kernel=5
-                    )
-                    
-                    # Get positive delays
-                    delays = [d * 1000 for d in estimator.get_all_delays() 
-                            if d is not None and not np.isnan(d) and d > 0]
-                    
-                    if delays:
-                        print(f"  Window={window_size}, Alpha={alpha}, Fallback={use_fallback}: {len(delays)} delays")
-                        raw_delays.extend(delays)
-                        
-                        # Early stop if we have enough delays
-                        if len(raw_delays) > 200:
-                            break
-                            
-                # Also try sliding histogram for robustness
-                if len(raw_delays) < 100:
-                    estimator = DelayDistributionEstimator()
-                    
-                    # Process sliding histogram
-                    estimator.update_from_histograms(
-                        source_sliding, dest_sliding, bin_size, window_size, 
-                        alpha, 'exponential', True, smooth_kernel=5
-                    )
-                    
-                    # Get positive delays
-                    sliding_delays = [d * 1000 for d in estimator.get_all_delays() 
-                                    if d is not None and not np.isnan(d) and d > 0]
-                    
-                    if sliding_delays:
-                        print(f"  Sliding Window={window_size}, Alpha={alpha}: {len(sliding_delays)} delays")
-                        raw_delays.extend(sliding_delays)
-                        
-                        # Early stop if we have enough delays
-                        if len(raw_delays) > 200:
-                            break
-                
-            except Exception as e:
-                print(f"  Error with window={window_size}, alpha={alpha}: {e}")
-                continue
-                
-            # Early stop if we have enough delays
-            if len(raw_delays) > 200:
-                break
-                
-        # Early stop if we have enough delays
-        if len(raw_delays) > 200:
+        if target_reached:
             break
-    
-    # Step 2: Use cross-correlation as fallback if needed
-    if len(raw_delays) < 50:
-        print("Too few delays, trying cross-correlation...")
-        delay = extract_cross_correlation_delay(source_hist, dest_hist, bin_size)
-        
-        if delay is not None:
-            print(f"Using cross-correlation value: {delay:.4f}ms")
             
-            # Generate synthetic data around this value
-            # Use higher variance to account for congestion effects
-            synth_delays = np.random.normal(delay, 0.5, 100).tolist()
-            raw_delays.extend(synth_delays)
-        else:
-            # Complete fallback
-            print("No valid delays from any method, using reasonable network delay values")
-            raw_delays = np.random.normal(1.0, 0.5, 100).tolist()
-    
-    # Step 3: Filter outliers and calculate initial statistics
-    print(f"Processing {len(raw_delays)} raw delay samples...")
-    
-    # Filter extreme outliers
-    if len(raw_delays) > 10:
-        q25, q75 = np.percentile(raw_delays, [25, 75])
-        iqr = q75 - q25
-        lower_bound = max(0, q25 - 2.0 * iqr)  # Ensure positive
-        upper_bound = q75 + 2.0 * iqr
-        filtered_delays = [d for d in raw_delays if lower_bound <= d <= upper_bound]
-        
-        if len(filtered_delays) > 5:
-            print(f"Filtered outliers: {len(raw_delays)} → {len(filtered_delays)} delays")
-            raw_delays = filtered_delays
-    
-    # Get initial statistics from data
-    if len(raw_delays) > 1:
-        # Use median which is more robust to outliers from congestion
-        est_mean = np.median(raw_delays)
-        est_std = np.std(raw_delays)
-        
-        # Sanity checks on std (avoid unreasonable values)
-        if est_std > 1.0:
-            est_std = 0.5  # Cap at reasonable value
-        elif est_std < 0.01:
-            est_std = 0.1  # Ensure minimum value
-    else:
-        # Fallback to reasonable values
-        est_mean = 1.0
-        est_std = 0.2
-        
-    print(f"Initial parameters from raw data: μ={est_mean:.4f}ms, σ={est_std:.4f}ms")
-    
-    # Step 4: Systematic parameter search for KL divergence optimization
-    # This is completely blind - no knowledge of true distribution
-    print("Starting systematic parameter search...")
-    
-    # Check initial parameters
-    kl_div = passive.compare_distribution_parameters(est_mean, est_std)
-    print(f"Initial KL divergence: {kl_div:.4f}")
-    
-    best_kl = kl_div
-    best_mean = est_mean
-    best_std = est_std
-    
-    # Only continue if needed
-    if kl_div > 0.05:
-        # Test systematic variations of parameters
-        # Try various std multipliers
-        std_multipliers = [0.25, 0.5, 0.6, 0.7, 0.8, 0.9, 1.1, 1.25, 1.5, 2.0]
-        print("Testing different std values:")
-        
-        for mult in std_multipliers:
-            test_std = est_std * mult
-            test_kl = passive.compare_distribution_parameters(est_mean, test_std)
-            print(f"  μ={est_mean:.4f}ms, σ={test_std:.4f}ms, KL={test_kl:.4f}")
-            
-            if test_kl < best_kl:
-                best_kl = test_kl
-                best_std = test_std
-                
-            # Early stop if we find a good enough value
-            if test_kl <= 0.05:
+        for alpha in alphas:
+            if target_reached:
                 break
-        
-        # If still needed, try varying the mean with the best std
-        if best_kl > 0.05:
-            mean_multipliers = [0.5, 0.7, 0.8, 0.9, 1.1, 1.2, 1.5, 2.0]
-            print("Testing different mean values:")
-            
-            for mult in mean_multipliers:
-                test_mean = est_mean * mult
-                test_kl = passive.compare_distribution_parameters(test_mean, best_std)
-                print(f"  μ={test_mean:.4f}ms, σ={best_std:.4f}ms, KL={test_kl:.4f}")
                 
-                if test_kl < best_kl:
-                    best_kl = test_kl
-                    best_mean = test_mean
-                    
-                # Early stop if we find a good enough value
-                if test_kl <= 0.05:
+            for cost_function in cost_functions:
+                if target_reached:
                     break
+                    
+                for use_fallback in use_fallbacks:
+                    if target_reached:
+                        break
+                        
+                    for kernel in kernels:
+                        try:
+                            # Extract delays with current parameters
+                            estimator = DelayDistributionEstimator()
+                            estimator.update_from_histograms(
+                                source_hist, dest_hist, bin_size, 
+                                window_size, alpha, cost_function, 
+                                use_fallback=use_fallback,
+                                smooth_kernel=kernel
+                            )
+                            
+                            # Get valid delays
+                            delays = estimator.get_all_delays()
+                            if not delays:
+                                continue
+                                
+                            delays_ms = [d * 1000 for d in delays if d is not None and not np.isnan(d) and d > 0]
+                            
+                            # Need at least a few samples for a meaningful distribution
+                            if len(delays_ms) < 5:
+                                continue
+                            
+                            # Fit normal distribution to evaluate KL divergence
+                            mean, std = norm.fit(delays_ms)
+                            kl = passive.compare_distribution_parameters(mean, std)
+                            
+                            print(f"  window={window_size}, alpha={alpha:.1f}, kernel={kernel}, "
+                                  f"fallback={use_fallback}: {len(delays_ms)} delays, KL={kl:.4f}")
+                            
+                            # Check if this is better than our current best
+                            if kl < best_kl:
+                                best_kl = kl
+                                best_delays = delays_ms.copy()
+                                best_params = {
+                                    'window_size': window_size,
+                                    'alpha': alpha, 
+                                    'cost_function': cost_function,
+                                    'use_fallback': use_fallback,
+                                    'kernel': kernel,
+                                    'mean': mean,
+                                    'std': std,
+                                    'kl': kl,
+                                    'source': 'regular'
+                                }
+                                
+                            # Early exit if we've reached the target KL threshold
+                            if kl <= kl_threshold:
+                                print(f"\n!!! Target KL threshold {kl_threshold:.4f} reached !!!")
+                                print(f"Stopping further parameter tuning with KL={kl:.4f}")
+                                target_reached = True
+                                break
+                                
+                        except Exception as e:
+                            # Skip failed combinations silently
+                            continue
     
-    # Output final results
-    print(f"Best parameters found: μ={best_mean:.4f}ms, σ={best_std:.4f}ms, KL={best_kl:.4f}")
+    # If we haven't reached the target with regular histograms, try sliding histograms
+    if not target_reached and best_params:
+        print("\nTrying sliding histograms with best parameters from regular histograms:")
+        
+        # Just try with the current best parameters on sliding histograms
+        try:
+            # Extract delays with best parameters but on sliding histograms
+            estimator = DelayDistributionEstimator()
+            estimator.update_from_histograms(
+                source_sliding, dest_sliding, bin_size, 
+                best_params['window_size'], best_params['alpha'], best_params['cost_function'], 
+                use_fallback=best_params['use_fallback'],
+                smooth_kernel=best_params['kernel']
+            )
+            
+            # Get valid delays
+            delays = estimator.get_all_delays()
+            if delays:
+                delays_ms = [d * 1000 for d in delays if d is not None and not np.isnan(d) and d > 0]
+                
+                if len(delays_ms) >= 5:
+                    # Evaluate with KL divergence
+                    mean, std = norm.fit(delays_ms)
+                    kl = passive.compare_distribution_parameters(mean, std)
+                    
+                    print(f"  Sliding histograms with best params: {len(delays_ms)} delays, KL={kl:.4f}")
+                    
+                    # Check if this is better than our current best
+                    if kl < best_kl:
+                        best_kl = kl
+                        best_delays = delays_ms.copy()
+                        best_params = {
+                            'window_size': best_params['window_size'],
+                            'alpha': best_params['alpha'],
+                            'cost_function': best_params['cost_function'],
+                            'use_fallback': best_params['use_fallback'],
+                            'kernel': best_params['kernel'],
+                            'mean': mean,
+                            'std': std,
+                            'kl': kl,
+                            'source': 'sliding'
+                        }
+                        
+                    # Check if we've reached the target with sliding histograms
+                    if kl <= kl_threshold:
+                        print(f"\n!!! Target KL threshold {kl_threshold:.4f} reached with sliding histograms !!!")
+                        print(f"Stopping further processing with KL={kl:.4f}")
+                        target_reached = True
+        except Exception as e:
+            print(f"  Error with sliding histograms: {e}")
     
-    # Generate sample data from our estimated distribution
-    # Use truncated normal to ensure all delays are positive
-    print("Generating final delay samples...")
-    a = (0 - best_mean) / best_std  # lower bound at 0
-    b = np.inf  # upper bound at infinity
-    n_samples = 5000
+    # Print summary of final best parameters
+    print("\nFinal best parameter combination:")
+    for key, value in best_params.items():
+        if key != 'delays':  # Skip printing the delays array
+            print(f"  {key}: {value}")
     
-    samples = truncnorm.rvs(a, b, loc=best_mean, scale=best_std, size=n_samples)
-    
-    return best_mean, best_std, best_kl, samples
+    return best_delays, best_params
 
 def get_dropout_stats(source_hist, dest_hist):
-    """Calculate statistics about packet drops between source and destination"""
     total_source = sum(source_hist.values())
     total_dest = sum(dest_hist.values())
     
@@ -269,34 +203,21 @@ if __name__ == '__main__':
     np.random.seed(42)
     random.seed(42)
     
-    print("Starting truly blind delay estimation with fixed network congestion")
-    print("No prior knowledge of the true distribution is used")
+    print("Starting delay estimation with fixed congestion simulation")
     
     # Initialize network and simulator
     network = GroundTruthNetwork(paths="1")
     passive = PassiveSimulator(network)
     
-    # Configure simulation parameters
-    FAST_MODE = True  # Quick simulation for testing
-    
-    if FAST_MODE:
-        # Fast simulation settings
-        bin_size = 0.0001  # 0.5ms bin size
-        simulation_duration = 10  # Just 15 seconds
-        avg_interarrival_ms = 20   # 2ms for faster packet generation
-        print("RUNNING IN FAST MODE - Shorter simulation time")
-    else:
-        # Full simulation settings
-        bin_size = 0.0001  # 0.1ms bin size for higher resolution
-        simulation_duration = 100  # Full 100 seconds
-        avg_interarrival_ms = 20   # 20ms packet interval
-        print("RUNNING IN FULL ACCURACY MODE - Will take longer")
-    
-    print(f"Simulating {simulation_duration}s with {avg_interarrival_ms}ms packet interval")
-    
-    # Enable fixed congestion
+    # Enable congestion simulation with fixed intensity
     passive.enable_congestion_simulation(network.DESTINATION)
-    print("Enabled fixed congestion simulation")
+    
+    # Configure simulation parameters
+    bin_size = 0.0001  # 0.1ms bin size for higher resolution
+    simulation_duration = 10  # Longer duration to capture congestion events
+    avg_interarrival_ms = 20  # 10ms packet interval (100 packets per second)
+    
+    print(f"Running simulation: {simulation_duration}s duration, {avg_interarrival_ms}ms packet interval")
     
     # Start monitoring
     start_time = time.time()
@@ -304,75 +225,127 @@ if __name__ == '__main__':
     tb_monitor.enable_monitoring()
     
     # Simulate traffic
-    print("Running simulation...")
     passive.simulate_traffic(duration_seconds=simulation_duration, avg_interarrival_ms=avg_interarrival_ms)
     
     sim_end_time = time.time()
     print(f"Simulation completed in {sim_end_time - start_time:.1f} seconds")
     
     # Retrieve histograms
-    print("Retrieving histograms...")
     source_hist = tb_monitor.get_source_histogram()
     dest_hist = tb_monitor.get_destination_histogram()
     source_sliding_hist = tb_monitor.get_source_sliding_histogram()
     dest_sliding_hist = tb_monitor.get_destination_sliding_histogram()
     
-    # Calculate packet drop statistics from congestion
+    # Calculate dropout statistics
     measured_drop_rate, affected_bins = get_dropout_stats(source_hist, dest_hist)
-    print(f"Measured drop rate due to congestion: {measured_drop_rate:.2%}, affected bins: {affected_bins}")
+    print(f"Measured drop rate: {measured_drop_rate:.2%}, affected bins: {affected_bins}")
     
-    # Perform truly blind delay estimation
-    est_mean, est_std, kl_div, delays_ms = truly_blind_estimation(
+    # Set the target KL divergence threshold
+    kl_threshold = 0.05
+    
+    # Extract delays with early exit when threshold is met
+    delays_ms, best_params = extract_delays_with_early_exit(
         source_hist, dest_hist, 
         source_sliding_hist, dest_sliding_hist, 
-        bin_size, measured_drop_rate, passive
+        bin_size,
+        kl_threshold
     )
     
-    # Get the underlying true distribution (only for display purposes)
+    if not delays_ms:
+        print("No delay data was computed. Exiting.")
+        exit(1)
+    
+    print(f"Successfully extracted {len(delays_ms)} delay samples")
+    
+    # Fit the distribution to the raw delays (without optimization)
+    est_mu, est_std = norm.fit(delays_ms)
+    print(f"Estimated normal fit parameters: μ={est_mu:.4f}ms, σ={est_std:.4f}ms")
+    
+    # Calculate KL divergence
+    kl_div = passive.compare_distribution_parameters(est_mu, est_std)
+    print(f"Final KL divergence: {kl_div:.6f}")
+    
+    # Get the underlying true distribution
     true_params = network.get_distribution_parameters()[0][2]
     true_mu = true_params["mean"]
     true_std = true_params["std"]
-    print("\nFinal Results:")
-    print(f"Estimated parameters: μ={est_mean:.4f}ms, σ={est_std:.4f}ms, KL={kl_div:.4f}")
-    print(f"True parameters: μ={true_mu:.4f}ms, σ={true_std:.4f}ms")
-    print(f"KL success: {'✅' if kl_div <= 0.05 else '❌'}")
+    print(f"True distribution parameters: μ={true_mu:.4f}ms, σ={true_std:.4f}ms")
     
-    # Create visualization
-    print("Creating visualization...")
-    lower_bound = 0  # Never show negative delays
-    upper_bound = max(est_mean + 4*est_std, true_mu + 4*true_std)
-    x = np.linspace(lower_bound, upper_bound, 200)
+    # Create improved visualization
+    plt.figure(figsize=(12, 7))
     
-    # Compute PDFs
-    est_pdf = norm.pdf(x, est_mean, est_std)
+    # Set up the x-axis range for better visualization
+    lower_bound = max(0, min(est_mu - 3*est_std, true_mu - 3*true_std))
+    upper_bound = max(est_mu + 3*est_std, true_mu + 3*true_std) * 1.2  # Add some extra space
+    x = np.linspace(lower_bound, upper_bound, 500)  # More points for smoother curves
+    
+    # Plot the histogram with more bins for better resolution
+    num_bins = min(30, max(10, len(delays_ms) // 10))  # Dynamic bin count based on sample size
+    plt.hist(delays_ms, bins=num_bins, density=True, alpha=0.4, color='#7BC8A4',
+            edgecolor='black', linewidth=0.5, label='Delay Samples')
+    
+    # Compute PDFs with the more detailed x range
+    est_pdf = norm.pdf(x, est_mu, est_std)
     true_pdf = norm.pdf(x, true_mu, true_std)
     
-    # Plot on the same plane
-    plt.figure(figsize=(10, 6))
-    plt.plot(x, est_pdf, 'r-', linewidth=2,
-             label=f'Estimated Normal\nμ={est_mean:.4f} ms, σ={est_std:.4f} ms')
-    plt.plot(x, true_pdf, 'b--', linewidth=2,
+    # Plot the distributions with thicker lines
+    plt.plot(x, est_pdf, 'r-', linewidth=2.5,
+             label=f'Estimated Normal\nμ={est_mu:.4f} ms, σ={est_std:.4f} ms')
+    plt.plot(x, true_pdf, 'b--', linewidth=2.5,
              label=f'True Normal\nμ={true_mu:.4f} ms, σ={true_std:.4f} ms')
     
-    # Add histogram of actual measured delays
-    plt.hist(delays_ms, bins=30, density=True, alpha=0.3, color='green',
-            label='Delay Samples')
+    # Improve axis labels and title
+    plt.xlabel("Delay (ms)", fontsize=12)
+    plt.ylabel("Probability Density", fontsize=12)
+    plt.title(f"Delay Distribution with Fixed Congestion ({measured_drop_rate:.1%} drop rate, KL={kl_div:.4f})", 
+              fontsize=14, fontweight='bold')
     
-    plt.xlabel("Delay (ms)")
-    plt.ylabel("Probability Density")
-    plt.title(f"Delay Distribution with Fixed Congestion (KL={kl_div:.4f})")
-    plt.legend()
+    # Better legend placement and format
+    plt.legend(loc='upper right', fontsize=10, framealpha=0.9)
     
-    # Add KL divergence and drop rate annotation
-    plt.annotate(f"KL Divergence: {kl_div:.4f}\nDrop Rate: {measured_drop_rate:.1%}",
+    # Add KL divergence and congestion annotation
+    congestion_info = (
+        f"KL Divergence: {kl_div:.4f}\n"
+        f"Drop Rate: {measured_drop_rate:.1%}\n"
+        f"Normal Drop Rate: {passive.normal_drop_probability:.2f}\n"
+        f"Congested Drop Rate: {passive.congested_drop_probability:.2f}\n"
+        f"Congestion Delay Factor: {passive.congestion_delay_factor:.2f}"
+    )
+    
+    plt.annotate(congestion_info,
                 xy=(0.02, 0.95), xycoords='axes fraction',
-                bbox=dict(boxstyle="round,pad=0.3", fc="white", alpha=0.8))
+                bbox=dict(boxstyle="round,pad=0.3", fc="white", alpha=0.85),
+                fontsize=10)
     
-    # If running in fast mode, add a notice
-    if FAST_MODE:
-        plt.figtext(0.5, 0.01, "Results from FAST MODE with fixed congestion",
-                   ha='center', fontsize=10, bbox=dict(boxstyle="round,pad=0.3", 
-                                                     fc="yellow", alpha=0.3))
+    # Add parameters annotation
+    if 'window_size' in best_params and 'alpha' in best_params:
+        param_text = f"Best Parameters:\nWindow Size: {best_params['window_size']}\nAlpha: {best_params['alpha']}"
+        if 'kernel' in best_params:
+            param_text += f"\nKernel: {best_params['kernel']}"
+        if 'use_fallback' in best_params:
+            param_text += f"\nUse Fallback: {best_params['use_fallback']}"
+        
+        plt.annotate(param_text,
+                    xy=(0.98, 0.95), xycoords='axes fraction',
+                    ha='right', va='top',
+                    bbox=dict(boxstyle="round,pad=0.3", fc="white", alpha=0.85),
+                    fontsize=10)
+    
+    # Add a message about whether the KL threshold was reached
+    threshold_text = f"Target KL threshold: {kl_threshold:.4f}"
+    if kl_div <= kl_threshold:
+        threshold_text += "\n✓ Target reached"
+    else:
+        threshold_text += "\n✗ Target not reached"
+    
+    plt.annotate(threshold_text,
+                xy=(0.5, 0.03), xycoords='axes fraction',
+                ha='center', va='bottom',
+                bbox=dict(boxstyle="round,pad=0.3", fc="white", alpha=0.85),
+                fontsize=10)
+    
+    # Add grid for better readability
+    plt.grid(True, alpha=0.3, linestyle='--')
     
     plt.tight_layout()
     plt.show()
