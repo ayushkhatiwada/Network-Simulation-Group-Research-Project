@@ -167,7 +167,7 @@ class PassiveSimulator:
             arrival_time = time.time()
             if random.random() < drop_prob:
                 self.event_log.append((rel_time, None, None))
-                print(f"[Drop] Packet {packet} dropped at switch {node_id} at {rel_time:.2f} s ({state}).")
+                #print(f"[Drop] Packet {packet} dropped at switch {node_id} at {rel_time:.2f} s ({state}).")
             else:
                 if delay_factor > 1.0:
                     extra_delay = (delay_factor - 1.0) * 0.01
