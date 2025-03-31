@@ -2,7 +2,7 @@ import time
 import numpy as np
 from passive_monitoring.passive_monitoring_interface.passive_simulator import PassiveSimulator
 from active_monitoring_evolution.ground_truth import GroundTruthNetwork
-from passive_monitoring.end_host_latency_measurement import EndHostEstimation
+from passive_monitoring.end_host.end_host_latency_measurement import EndHostEstimation
 
 def evolution_1_probe_drops():
     """

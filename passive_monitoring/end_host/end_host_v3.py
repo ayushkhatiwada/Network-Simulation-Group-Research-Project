@@ -3,10 +3,10 @@ import random
 import numpy as np
 from passive_monitoring.passive_monitoring_interface.passive_simulator import PassiveSimulator
 from active_monitoring_evolution.ground_truth import GroundTruthNetwork
-from passive_monitoring.end_host_latency_measurement import EndHostEstimation
+from passive_monitoring.end_host.end_host_latency_measurement import EndHostEstimation
 from passive_monitoring.passive_monitoring_interface.switch_and_packet import Packet
 
-def evolution_3_with_congestion_and_drops():
+def evolution_2_with_congestion_and_drops():
     print("=== Evolution 2: Estimating Under Congestion + Drops (Normal Distribution) ===")
 
     target_kl = 0.05
