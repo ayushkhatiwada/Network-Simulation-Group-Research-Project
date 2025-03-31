@@ -1,4 +1,5 @@
 import time
+import matplotlib as plt
 import numpy as np
 from collections import deque
 
@@ -90,3 +91,21 @@ class EndHostEstimation:
         for i, (timestamp, old_state, new_state) in enumerate(self.state_change_times):
             summary += f"  {i+1}. Time: {timestamp:.2f}s - {old_state} -> {new_state}\n"
         return summary
+
+def plot_results(results):
+    # Plotting KL divergence vs. window size for different filtering strategies
+    plt.figure(figsize=(10, 6))
+
+    for method, results in results_dict.items():
+        window_sizes = [w for w, kl in results]
+        kl_scores = [kl for w, kl in results]
+        plt.plot(window_sizes, kl_scores, marker='o', label=method.replace("_", " ").title())
+
+    plt.axhline(y=0.05, color='gray', linestyle='--', label='Target KL Threshold (0.05)')
+    plt.title("Evolution 0: KL Divergence vs. Window Size (With Dropped Probes)")
+    plt.xlabel("Window Size")
+    plt.ylabel("Average KL Divergence")
+    plt.legend()
+    plt.grid(True)
+    plt.tight_layout()
+    plt.show()
