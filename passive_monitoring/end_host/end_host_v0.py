@@ -24,7 +24,7 @@ def evolution_0_find_optimal_window(min_window_size=100, max_window_size=1000, w
 
         for trial in range(trials_per_window):
             network = GroundTruthNetwork()
-            simulator = PassiveSimulator(network)
+            simulator = PassiveSimulator(network, 42)
             simulator.normal_drop_probability = 0.0
 
             monitor = EndHostEstimation(
@@ -100,7 +100,7 @@ def evolution_0_find_optimal_window(min_window_size=100, max_window_size=1000, w
 
 results_dict = {}
 
-results_dict["no_filtering"] = evolution_0_find_optimal_window(50, 500, 50, False, None)
+results_dict["no_filtering"] = evolution_0_find_optimal_window(10, 500, 10, False, None)
 # results_dict["trimmed"] = evolution_0_find_optimal_window(100, 1000, 100, True, "trimmed")
 # results_dict["median_filtering"] = evolution_0_find_optimal_window(100, 1000, 100, True, "median_filter")
 # results_dict["threshold"] = evolution_0_find_optimal_window(100, 1000, 100, True, "threshold")

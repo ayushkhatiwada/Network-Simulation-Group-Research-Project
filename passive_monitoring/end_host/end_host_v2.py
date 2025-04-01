@@ -25,7 +25,7 @@ def evolution_2_with_congestion(min_window_size=100, max_window_size=1000, windo
 
         for trial in range(trials_per_window):
             network = GroundTruthNetwork()
-            simulator = PassiveSimulator(network)
+            simulator = PassiveSimulator(network, 42)
             simulator.normal_drop_probability = 0.1
             simulator.congested_drop_probability = 0.4
             simulator.enable_congestion_simulation(network.DESTINATION)
@@ -104,4 +104,4 @@ def evolution_2_with_congestion(min_window_size=100, max_window_size=1000, windo
     plt.show()
 
 
-evolution_2_with_congestion(50, 1000, 50, False, None)
+evolution_2_with_congestion(20, 1000, 20, False, None)

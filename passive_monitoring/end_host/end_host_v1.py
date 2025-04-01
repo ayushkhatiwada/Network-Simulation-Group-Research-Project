@@ -24,7 +24,7 @@ def evolution_1_dropped_probes(min_window_size=100, max_window_size=1000, window
 
         for trial in range(trials_per_window):
             network = GroundTruthNetwork()
-            simulator = PassiveSimulator(network)
+            simulator = PassiveSimulator(network, 42)
 
             # Use simulator to patch packet drop behavior, but simulate manually
             simulator.set_drop_probability(network.DESTINATION, drop_probability)
