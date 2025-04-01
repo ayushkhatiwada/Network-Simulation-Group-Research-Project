@@ -209,13 +209,13 @@ if __name__ == '__main__':
     network = GroundTruthNetwork(paths="1")
     passive = PassiveSimulator(network)
     
-    # Enable congestion simulation with fixed intensity
-    passive.enable_congestion_simulation(network.DESTINATION)
-    
     # Configure simulation parameters
     bin_size = 0.0001  # 0.1ms bin size for higher resolution
     simulation_duration = 10  # Longer duration to capture congestion events
     avg_interarrival_ms = 20  # 10ms packet interval (100 packets per second)
+
+    # Enable congestion simulation with fixed intensity
+    passive.enable_congestion_simulation(network.DESTINATION, simulation_duration)
     
     print(f"Running simulation: {simulation_duration}s duration, {avg_interarrival_ms}ms packet interval")
     
