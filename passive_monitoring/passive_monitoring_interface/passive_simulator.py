@@ -1,7 +1,9 @@
 import time
+from time import sleep
 import random
 import math
 from active_monitoring_evolution.ground_truth import GroundTruthNetwork
+from passive_monitoring.passive_monitoring_interface.switch_and_packet import Packet
 
 class PassiveSimulator:
     def __init__(self, ground_truth_network: GroundTruthNetwork):
@@ -119,8 +121,12 @@ class PassiveSimulator:
         switch.receive = modified_receive
         print(f"Enabled congestion simulation on switch {node_id}.")
 
-    def simulate_traffic(self, duration_seconds=10, avg_interarrival_ms=50):
-        self.network.simulate_traffic(duration_seconds, avg_interarrival_ms)
+    def simulate_traffic(self, duration_seconds=10, avg_interarrival_ms=50, flow_id_probabilities=None):
+        start_time = time.time()
+        while time.time() - start_time < duration_seconds:
+            packet = Packet(self.network.SOURCE, self.network.DESTINATION, probabilities=flow_id_probabilities)
+            self.network.transmit_packet(packet)
+            sleep(avg_interarrival_ms / 1000.0)
 
     def compare_distribution_parameters(self, pred_mean: float, pred_std: float) -> float:
         params = self.network.get_distribution_parameters(self.network.SOURCE, self.network.DESTINATION)
