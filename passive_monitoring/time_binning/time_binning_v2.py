@@ -29,10 +29,11 @@ def extract_delays_with_early_exit(source_hist, dest_hist, source_sliding, dest_
     print(f"\nTuning alpha and window size parameters (target KL: {kl_threshold:.4f})...")
     
     # Define parameter search grid
-    window_sizes = [7, 9, 11]
-    alphas = [0.5, 1.0]
+    #window_sizes = [4, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23]
+    window_sizes = [9]
+    alphas = [0.5]
     cost_functions = ['exponential']
-    kernels = [3, 5, 7]
+    kernels = [3]
     use_fallbacks = [True, False]
     
     # Track the best combination found
@@ -47,6 +48,7 @@ def extract_delays_with_early_exit(source_hist, dest_hist, source_sliding, dest_
     
     # Try with regular histograms first
     for window_size in window_sizes:
+        print(window_size)
         if target_reached:
             break
             
@@ -207,12 +209,12 @@ if __name__ == '__main__':
     
     # Initialize network and simulator
     network = GroundTruthNetwork(paths="1")
-    passive = PassiveSimulator(network)
+    passive = PassiveSimulator(network, 42)
     
     # Configure simulation parameters
     bin_size = 0.0001  # 0.1ms bin size for higher resolution
-    simulation_duration = 10  # Longer duration to capture congestion events
-    avg_interarrival_ms = 20  # 10ms packet interval (100 packets per second)
+    simulation_duration = 50  # Longer duration to capture congestion events
+    avg_interarrival_ms = 20 # 10ms packet interval (100 packets per second)
 
     # Enable congestion simulation with fixed intensity
     passive.enable_congestion_simulation(network.DESTINATION, simulation_duration)
