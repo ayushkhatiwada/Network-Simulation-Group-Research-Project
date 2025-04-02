@@ -1,0 +1,5 @@
+{
+    "python.analysis.extraPaths": [
+        "./active_probing_algos"
+    ]
+}
