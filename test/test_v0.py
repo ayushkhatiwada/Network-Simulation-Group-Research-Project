@@ -6,7 +6,7 @@ import math
 import os
 import sys
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../active_probing_algos')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../active_probing_evolution_2')))
 from active_simulator_v0 import ActiveSimulator_v0
 
 
