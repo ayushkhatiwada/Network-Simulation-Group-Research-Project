@@ -6,7 +6,7 @@ from active_monitoring_evolution.ground_truth import GroundTruthNetwork
 from passive_monitoring.end_host.end_host_latency_measurement import EndHostEstimation
 from passive_monitoring.passive_monitoring_interface.switch_and_packet import Packet
 
-def evolution_1_dropped_probes(min_window_size=100, max_window_size=1000, window_increment=100, apply_filtering=True, discard_method="median_filter", drop_probability=0.2):
+def evolution_1_dropped_probes(min_window_size=100, max_window_size=1000, window_increment=100, apply_filtering=True, discard_method="median_filter", drop_probability=0.2, seed=42):
     print(f"\n=== Evolution 1: Estimating Delay With Dropped Probes === (filtering: {discard_method})")
 
     target_kl = 0.05
@@ -24,7 +24,7 @@ def evolution_1_dropped_probes(min_window_size=100, max_window_size=1000, window
 
         for trial in range(trials_per_window):
             network = GroundTruthNetwork()
-            simulator = PassiveSimulator(network, 42)
+            simulator = PassiveSimulator(network, seed)
 
             # Use simulator to patch packet drop behavior, but simulate manually
             simulator.set_drop_probability(network.DESTINATION, drop_probability)
@@ -85,27 +85,28 @@ def evolution_1_dropped_probes(min_window_size=100, max_window_size=1000, window
             
     return results
 
+if __name__ == "__main__":
 
-results_dict = {}
+    results_dict = {}
 
-results_dict["no_filtering"] = evolution_1_dropped_probes(20, 500, 20, False, None)
-# results_dict["trimmed"] = evolution_1_dropped_probes(100, 1000, 100, True, "trimmed")
-# results_dict["median_filtering"] = evolution_1_dropped_probes(100, 1000, 100, True, "median_filter")
-# results_dict["threshold"] = evolution_1_dropped_probes(100, 1000, 100, True, "threshold")
+    results_dict["no_filtering"] = evolution_1_dropped_probes(20, 500, 20, False, None)
+    # results_dict["trimmed"] = evolution_1_dropped_probes(100, 1000, 100, True, "trimmed")
+    # results_dict["median_filtering"] = evolution_1_dropped_probes(100, 1000, 100, True, "median_filter")
+    # results_dict["threshold"] = evolution_1_dropped_probes(100, 1000, 100, True, "threshold")
 
-# Plotting KL divergence vs. window size for different filtering strategies
-plt.figure(figsize=(10, 6))
+    # Plotting KL divergence vs. window size for different filtering strategies
+    plt.figure(figsize=(10, 6))
 
-for method, results in results_dict.items():
-    window_sizes = [w for w, kl in results]
-    kl_scores = [kl for w, kl in results]
-    plt.plot(window_sizes, kl_scores, marker='o', label=method.replace("_", " ").title())
+    for method, results in results_dict.items():
+        window_sizes = [w for w, kl in results]
+        kl_scores = [kl for w, kl in results]
+        plt.plot(window_sizes, kl_scores, marker='o', label=method.replace("_", " ").title())
 
-plt.axhline(y=0.05, color='gray', linestyle='--', label='Target KL Threshold (0.05)')
-plt.title("Evolution 1: KL Divergence vs. Window Size (Dropped Probes)")
-plt.xlabel("Window Size")
-plt.ylabel("Average KL Divergence")
-plt.legend()
-plt.grid(True)
-plt.tight_layout()
-plt.show()
+    plt.axhline(y=0.05, color='gray', linestyle='--', label='Target KL Threshold (0.05)')
+    plt.title("Evolution 1: KL Divergence vs. Window Size (Dropped Probes)")
+    plt.xlabel("Window Size")
+    plt.ylabel("Average KL Divergence")
+    plt.legend()
+    plt.grid(True)
+    plt.tight_layout()
+    # plt.show()

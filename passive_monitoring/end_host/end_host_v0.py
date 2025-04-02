@@ -6,7 +6,7 @@ from active_monitoring_evolution.ground_truth import GroundTruthNetwork
 from passive_monitoring.end_host.end_host_latency_measurement import EndHostEstimation
 from passive_monitoring.passive_monitoring_interface.switch_and_packet import Packet
 
-def evolution_0_find_optimal_window(min_window_size=100, max_window_size=1000, window_increment=100, apply_filtering=True, discard_method="median_filter"):
+def evolution_0_find_optimal_window(min_window_size=100, max_window_size=1000, window_increment=100, apply_filtering=True, discard_method="median_filter", seed=42):
     print("=== Evolution 0: Finding Optimal Window Size (Normal Distribution, No Congestion) ===")
 
     target_kl = 0.05
@@ -24,7 +24,7 @@ def evolution_0_find_optimal_window(min_window_size=100, max_window_size=1000, w
 
         for trial in range(trials_per_window):
             network = GroundTruthNetwork()
-            simulator = PassiveSimulator(network, 42)
+            simulator = PassiveSimulator(network, seed)
             simulator.normal_drop_probability = 0.0
 
             monitor = EndHostEstimation(
@@ -88,7 +88,7 @@ def evolution_0_find_optimal_window(min_window_size=100, max_window_size=1000, w
 
     return results
 
-# if __name__ == "__main__":
+if __name__ == "__main__":
 
     # min_window_size = 100
     # max_window_size = 1000
@@ -97,27 +97,26 @@ def evolution_0_find_optimal_window(min_window_size=100, max_window_size=1000, w
     # apply_filtering = False
     # discard_method = None
 
+    results_dict = {}
 
-results_dict = {}
+    results_dict["no_filtering"] = evolution_0_find_optimal_window(10, 500, 10, False, None)
+    # results_dict["trimmed"] = evolution_0_find_optimal_window(100, 1000, 100, True, "trimmed")
+    # results_dict["median_filtering"] = evolution_0_find_optimal_window(100, 1000, 100, True, "median_filter")
+    # results_dict["threshold"] = evolution_0_find_optimal_window(100, 1000, 100, True, "threshold")
 
-results_dict["no_filtering"] = evolution_0_find_optimal_window(10, 500, 10, False, None)
-# results_dict["trimmed"] = evolution_0_find_optimal_window(100, 1000, 100, True, "trimmed")
-# results_dict["median_filtering"] = evolution_0_find_optimal_window(100, 1000, 100, True, "median_filter")
-# results_dict["threshold"] = evolution_0_find_optimal_window(100, 1000, 100, True, "threshold")
+    # Plotting KL divergence vs. window size for different filtering strategies
+    plt.figure(figsize=(10, 6))
 
-# Plotting KL divergence vs. window size for different filtering strategies
-plt.figure(figsize=(10, 6))
+    for method, results in results_dict.items():
+        window_sizes = [w for w, kl in results]
+        kl_scores = [kl for w, kl in results]
+        plt.plot(window_sizes, kl_scores, marker='o', label=method.replace("_", " ").title())
 
-for method, results in results_dict.items():
-    window_sizes = [w for w, kl in results]
-    kl_scores = [kl for w, kl in results]
-    plt.plot(window_sizes, kl_scores, marker='o', label=method.replace("_", " ").title())
-
-plt.axhline(y=0.05, color='gray', linestyle='--', label='Target KL Threshold (0.05)')
-plt.title("Evolution 0: KL Divergence vs. Window Size (Normal)")
-plt.xlabel("Window Size")
-plt.ylabel("Average KL Divergence")
-plt.legend()
-plt.grid(True)
-plt.tight_layout()
-plt.show()
+    plt.axhline(y=0.05, color='gray', linestyle='--', label='Target KL Threshold (0.05)')
+    plt.title("Evolution 0: KL Divergence vs. Window Size (Normal)")
+    plt.xlabel("Window Size")
+    plt.ylabel("Average KL Divergence")
+    plt.legend()
+    plt.grid(True)
+    plt.tight_layout()
+    # plt.show()

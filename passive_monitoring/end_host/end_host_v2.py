@@ -7,8 +7,8 @@ from active_monitoring_evolution.ground_truth import GroundTruthNetwork
 from passive_monitoring.end_host.end_host_latency_measurement import EndHostEstimation
 from passive_monitoring.passive_monitoring_interface.switch_and_packet import Packet
 
-def evolution_2_with_congestion(min_window_size=100, max_window_size=1000, window_increment=100, apply_filtering=None, discard_method="median_filter"):
-    # print(f"\n=== Evolution 3: Estimating Latency Parameters with Congestion === filtering:")
+def evolution_2_with_congestion(min_window_size=100, max_window_size=1000, window_increment=100, apply_filtering=None, discard_method="median_filter", seed=42):
+    print(f"\n=== Evolution 2: Estimating Latency Parameters with Congestion === filtering:")
 
     target_kl = 0.05
     trials_per_window = 10
@@ -25,7 +25,7 @@ def evolution_2_with_congestion(min_window_size=100, max_window_size=1000, windo
 
         for trial in range(trials_per_window):
             network = GroundTruthNetwork()
-            simulator = PassiveSimulator(network, 42)
+            simulator = PassiveSimulator(network, seed)
             simulator.normal_drop_probability = 0.1
             simulator.congested_drop_probability = 0.4
             simulator.enable_congestion_simulation(network.DESTINATION)
@@ -76,7 +76,6 @@ def evolution_2_with_congestion(min_window_size=100, max_window_size=1000, windo
             if avg_kl <= target_kl:
                 print(f"\n*** Optimal window size found: {window_size} ***")
                 break
-
     print(f"\n=== Evolution 3 Results (filtering: {discard_method}) ===")
     print("Window Size | Avg KL Score")
     print("--------------------------")
@@ -87,21 +86,23 @@ def evolution_2_with_congestion(min_window_size=100, max_window_size=1000, windo
         print(f"\nSmallest window size for achieving KL score ≤ {target_kl}: {min(optimal_windows)}")
     else:
         print(f"\nNo window size achieved the target KL score of {target_kl} consistently.")
+    return results
 
-    # Plot
-    window_sizes = [w for w, kl in results]
-    kl_scores = [kl for w, kl in results]
+    # # Plot
+    # window_sizes = [w for w, kl in results]
+    # kl_scores = [kl for w, kl in results]
 
-    plt.figure(figsize=(10, 6))
-    plt.plot(window_sizes, kl_scores, marker='o', label='KL Divergence')
-    plt.axhline(y=0.05, color='gray', linestyle='--', label='Target KL Threshold (0.05)')
-    plt.title("Evolution 3: KL Divergence vs. Window Size (With Congestion)")
-    plt.xlabel("Window Size")
-    plt.ylabel("Average KL Divergence")
-    plt.legend()
-    plt.grid(True)
-    plt.tight_layout()
-    plt.show()
+    # plt.figure(figsize=(10, 6))
+    # plt.plot(window_sizes, kl_scores, marker='o', label='KL Divergence')
+    # plt.axhline(y=0.05, color='gray', linestyle='--', label='Target KL Threshold (0.05)')
+    # plt.title("Evolution 3: KL Divergence vs. Window Size (With Congestion)")
+    # plt.xlabel("Window Size")
+    # plt.ylabel("Average KL Divergence")
+    # plt.legend()
+    # plt.grid(True)
+    # plt.tight_layout()
+    # plt.show()
+if __name__ == "__main__":
 
 
-evolution_2_with_congestion(20, 1000, 20, False, None)
+    evolution_2_with_congestion(20, 1000, 20, False, None)
