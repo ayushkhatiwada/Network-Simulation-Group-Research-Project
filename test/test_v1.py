@@ -3,7 +3,7 @@ import random
 import os
 import sys
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../active_probing_evolution_2')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../active_monitoring_evolution_2')))
 from active_simulator_v1 import ActiveSimulator_v1
 
 

@@ -1,5 +1,5 @@
 {
     "python.analysis.extraPaths": [
-        "./active_probing_evolution_2"
+        "./active_monitoring_evolution_2"
     ]
 }
