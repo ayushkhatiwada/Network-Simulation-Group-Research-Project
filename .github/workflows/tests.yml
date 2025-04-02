@@ -14,7 +14,7 @@ jobs:
     
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v2  # Checkout the repository code
+      uses: actions/checkout@v2
 
     - name: Set up Python
       uses: actions/setup-python@v2
@@ -28,4 +28,4 @@ jobs:
 
     - name: Run tests
       run: |
-        python -m unittest discover -s test  # Assumes your tests are in the 'test' directory
+        python -m unittest discover -s test
