@@ -4,23 +4,14 @@ from active_simulator_v1 import ActiveSimulator_v1
 
 
 class ActiveSimulator_v2(ActiveSimulator_v1):
-    """
-    Simulates congestion
 
-    - Congestion occurs at randomly placed time intervals within the 100 seconds
-    - Total congested time is 50 sec; non-congested time is 50 sec.
-    - Probes sent during congestion intervals have higher drop rate and increased delay.
-    """
+    def __init__(self, paths="1", random_seed=None, simulation_duration=100) -> None:
+        super().__init__(paths=paths, random_seed=random_seed, simulation_duration=simulation_duration)
 
-    def __init__(self, paths="1", seed=None) -> None:
-        super().__init__(paths, seed=seed)
-
-        # Congestion parameters
         self.normal_drop_probability = 0.1
         self.congested_drop_probability = 0.4
         self.congestion_delay_factor = 1.5
-
-        # Generate time intervals where congestion will occur
+        self.congestion_rng = random.Random(random_seed)
         self.congestion_intervals = self._generate_congestion_intervals()
 
 
@@ -53,10 +44,10 @@ class ActiveSimulator_v2(ActiveSimulator_v1):
             state = "normal"
             drop_prob = self.normal_drop_probability
 
-        # Decide if probe should be dropped using local rng
-        if self.rng.random() < drop_prob:
+        # Decide if probe should be dropped using local drop_rng
+        if self.drop_rng.random() < drop_prob:
             self.event_log.append((departure_time, None, None))
-            print(f"[Drop] Probe at {departure_time:.2f} s dropped ({state}).")
+            #(f"[Drop] Probe at {departure_time:.2f} s dropped ({state}).")
             return None
 
         # Get cached delay for specific time if it exists, otherwise generate new delay
@@ -66,40 +57,58 @@ class ActiveSimulator_v2(ActiveSimulator_v1):
             base_delay = self.measure_end_to_end_delay()
             self.time_cache[departure_time] = base_delay
 
-        # Increase dealy by congestion_delay_factor if we are in a congestion period
+        # Increase delay by congestion_delay_factor if we are in a congestion period
         final_delay = base_delay * self.congestion_delay_factor if congested else base_delay
 
         arrival_time = departure_time + final_delay
         self.event_log.append((departure_time, arrival_time, final_delay))
         return final_delay
 
-
-    # Don't read this function, don't worry about how it works
-    # You should write an algorithms that initally knows nothing about where the congestion occurs
-    # Having knowledge about when the congestion occurs gives you an unfair advantage
-    # potentially leading to your algorithm overfitting for this specific congestion scenario.
     def _generate_congestion_intervals(self):
         """
-        Generate congestion intervals
-        
-        Returns list of (start, end) tuples representing the congestion time periods
+        Generate congestion intervals for half the total simulation time.
+        Returns a list of (start, end) tuples representing congested time periods.
         """
-        something = [0x5, 0xA, 0xF, 0x14]
-        self.rng.shuffle(something)  # Use local rng instead of global random
-        total_congested_time = sum(something)
         total_simulation_time = self.max_departure_time
+        total_congested_time = total_simulation_time / 2.0  # half of the overall sim time
         total_non_congested_time = total_simulation_time - total_congested_time
-        num_of_non_congestion_intervals = len(something) + 1
-        weights = [self.rng.random() for _ in range(num_of_non_congestion_intervals)]
+
+        # We'll break congestion time intervals into random segments.
+        # For example, you can either keep the original logic for random intervals
+        # or simplify to a single half block. Below we'll keep a similar approach
+        # but scale "something" so it sums to total_congested_time.
+        # ---------------------------------------------------------------
+        # Example with just one big chunk: 
+        # return [(0, total_congested_time)]  # Entire first half is congested
+        # You can then separate it from the second half, etc.
+        # ---------------------------------------------------------------
+
+        # Original approach: fixed list of interval lengths
+        base_intervals = [5, 10, 15, 20]  # sums to 50
+        # We scale them to match total_congested_time
+        scale_factor = total_congested_time / sum(base_intervals)
+        intervals = [i * scale_factor for i in base_intervals]
+
+        # Shuffle intervals to randomize the positions
+        self.congestion_rng.shuffle(intervals)
+        num_of_non_congestion_intervals = len(intervals) + 1
+
+        # Randomly partition the total non-congested time among these intervals
+        weights = [self.congestion_rng.random() for _ in range(num_of_non_congestion_intervals)]
         weight_sum = sum(weights)
         non_congested_durations = [(w / weight_sum) * total_non_congested_time for w in weights]
+
+        # Finally, build the congestion intervals
         congestion_intervals = []
         current_time = non_congested_durations[0]
-        for i, length in enumerate(something):
+
+        for i, length in enumerate(intervals):
             start = current_time
             end = start + length
             congestion_intervals.append((start, end))
-            current_time = end + non_congested_durations[i + 1]
+            if i + 1 < len(non_congested_durations):
+                current_time = end + non_congested_durations[i + 1]
+
         return congestion_intervals
 
 

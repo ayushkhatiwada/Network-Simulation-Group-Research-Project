@@ -1,19 +1,19 @@
 import math
+import random
 
 from ground_truth import GroundTruthNetwork
 
 
 class ActiveSimulator_v0:
-    def __init__(self, paths="1") -> None:
-        """
-        Initializes the simulator with a network model.
-        """
+    def __init__(self, paths="1", random_seed=42, simulation_duration=100) -> None:
+        random.seed(random_seed)
         self.network = GroundTruthNetwork(paths)
-        self.event_log = []                 # Stores tuples: (departure_time, arrival_time, delay)
-        self.time_cache = {}                # Caches computed delays for given departure_times
-        self.max_departure_time = 100.0     # Allowed departure times: [0, 100] seconds
-        self.max_probes_per_second = 10     # Maximum number of probes that can be sent per second
-        self.probe_count_per_second = {}    # Tracks number of probes sent for each second
+        self.paths = paths
+        self.event_log = []
+        self.time_cache = {}
+        self.max_departure_time = simulation_duration
+        self.max_probes_per_second = 10
+        self.probe_count_per_second = {}
 
     def measure_end_to_end_delay(self) -> float:
         """
@@ -79,8 +79,16 @@ class ActiveSimulator_v0:
         """
         Compares the predicted delay distribution parameters with the actual network parameters using KL divergence.
         Aim for a KL divergence of <= 0.05
+        
+        :param pred_mean: Predicted mean of the delay distribution
+        :param pred_std: Predicted standard deviation of the delay distribution
+        :return: KL divergence score (lower is better)
         """
-        params = self.network.get_distribution_parameters(self.network.SOURCE, self.network.DESTINATION)
+        # Validate that we're using a single-edge network
+        if self.paths != "1" and self.paths != 1:
+            raise ValueError("This function can only be used with a single-edge network (paths='1').")
+            
+        params = self.network.get_single_edge_distribution_parameters(self.network.SOURCE, self.network.DESTINATION)
         actual_mean = params["mean"]
         actual_std = params["std"]
 
@@ -92,3 +100,35 @@ class ActiveSimulator_v0:
         else:
             print(f"KL divergence: {kl_div:.4f} ❌")
         return kl_div
+
+    def compare_distribution_parameters_2(self, mean1: float, mean2: float, std1: float, std2: float) -> list[float]:
+        """
+        Compare two predicted distributions to two actual edge distributions using KL divergence.
+        Returns a list with two KL divergence scores.
+        
+        :param mean1: Predicted mean for the first edge
+        :param mean2: Predicted mean for the second edge
+        :param std1: Predicted standard deviation for the first edge
+        :param std2: Predicted standard deviation for the second edge
+        :return: List containing two KL divergence scores
+        """
+        # Validate that we're using a multi-edge network
+        if self.paths != "2" and self.paths != 2:
+            raise ValueError("This function can only be used with a dual-edge network (paths='2').")
+            
+        actual_params = self.network.get_multi_edge_distribution_parameters(self.network.SOURCE, self.network.DESTINATION)
+
+        if len(actual_params) != 2:
+            raise ValueError("Expected exactly two edges between nodes for multi-edge comparison.")
+
+        actual1 = actual_params[0]
+        actual2 = actual_params[1]
+
+        kl1 = math.log(std1 / actual1["std"]) + ((actual1["std"] ** 2 + (actual1["mean"] - mean1) ** 2) / (2 * std1 ** 2)) - 0.5
+
+        kl2 = math.log(std2 / actual2["std"]) + ((actual2["std"] ** 2 + (actual2["mean"] - mean2) ** 2) / (2 * std2 ** 2)) - 0.5
+
+        print(f"KL divergence for edge 1: {kl1:.4f} {'✅' if kl1 <= 0.05 else '❌'}")
+        print(f"KL divergence for edge 2: {kl2:.4f} {'✅' if kl2 <= 0.05 else '❌'}")
+
+        return [kl1, kl2]
