@@ -35,7 +35,7 @@ class AdaptiveProber(BaseProber):
         self.probe_rate_history = deque([self.max_probes_per_second] * 3, maxlen=3)
         
         # prevent numerical issues
-        self.min_std = 0.02
+        self.min_std = 0.01
         
         # adaptive thresholds
         self.congestion_z = congestion_z

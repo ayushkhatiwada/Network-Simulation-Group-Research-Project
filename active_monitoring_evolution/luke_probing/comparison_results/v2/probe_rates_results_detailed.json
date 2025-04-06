@@ -1,0 +1,282 @@
+[
+    {
+        "duration": 100,
+        "probes_per_second": 10,
+        "base_prober": {
+            "kl_divergence": 0.4153670924646189,
+            "kl_divergence_std": 0.02148774378196527,
+            "cpu_time": 0.005176139999971383,
+            "kl_per_cpu": 80.32312700437681,
+            "kl_per_probe_rate": 0.04153670924646189,
+            "total_probes": 1000.0
+        },
+        "congestion_aware_prober": {
+            "kl_divergence": 0.08042345670544043,
+            "kl_divergence_std": 0.07743883388714289,
+            "cpu_time": 0.02041733999999906,
+            "kl_per_cpu": 3.8175460796588694,
+            "kl_per_probe_rate": 0.008042345670544045,
+            "total_probes": 648.62
+        },
+        "binary_rate_prober": {
+            "kl_divergence": 0.11747339020715412,
+            "kl_divergence_std": 0.06393501742126928,
+            "cpu_time": 0.0077266200000167375,
+            "kl_per_cpu": 21.132383690669077,
+            "kl_per_probe_rate": 0.011747339020715414,
+            "total_probes": 826.88
+        }
+    },
+    {
+        "duration": 100,
+        "probes_per_second": 20,
+        "base_prober": {
+            "kl_divergence": 0.4141435743572536,
+            "kl_divergence_std": 0.015968931974694577,
+            "cpu_time": 0.009054399999986345,
+            "kl_per_cpu": 45.74658055255639,
+            "kl_per_probe_rate": 0.02070717871786268,
+            "total_probes": 2000.0
+        },
+        "congestion_aware_prober": {
+            "kl_divergence": 0.059050346355652546,
+            "kl_divergence_std": 0.057188964454919326,
+            "cpu_time": 0.030511679999995066,
+            "kl_per_cpu": 1.875226950326759,
+            "kl_per_probe_rate": 0.002952517317782627,
+            "total_probes": 1318.24
+        },
+        "binary_rate_prober": {
+            "kl_divergence": 0.10428392458068099,
+            "kl_divergence_std": 0.06571487817643473,
+            "cpu_time": 0.009308140000011917,
+            "kl_per_cpu": 17.862023133643778,
+            "kl_per_probe_rate": 0.005214196229034051,
+            "total_probes": 1606.2
+        }
+    },
+    {
+        "duration": 100,
+        "probes_per_second": 30,
+        "base_prober": {
+            "kl_divergence": 0.41749801225176375,
+            "kl_divergence_std": 0.013080318651011868,
+            "cpu_time": 0.013222539999983383,
+            "kl_per_cpu": 31.594404701266107,
+            "kl_per_probe_rate": 0.013916600408392125,
+            "total_probes": 3000.0
+        },
+        "congestion_aware_prober": {
+            "kl_divergence": 0.05549764246786417,
+            "kl_divergence_std": 0.08059954212718329,
+            "cpu_time": 0.03911506000002191,
+            "kl_per_cpu": 1.5785243710243675,
+            "kl_per_probe_rate": 0.0018499214155954723,
+            "total_probes": 1960.96
+        },
+        "binary_rate_prober": {
+            "kl_divergence": 0.08761406809320776,
+            "kl_divergence_std": 0.05689365380197467,
+            "cpu_time": 0.011279220000010354,
+            "kl_per_cpu": 12.591273440815094,
+            "kl_per_probe_rate": 0.0029204689364402594,
+            "total_probes": 2577.18
+        }
+    },
+    {
+        "duration": 100,
+        "probes_per_second": 40,
+        "base_prober": {
+            "kl_divergence": 0.4162944003542176,
+            "kl_divergence_std": 0.009197223740269933,
+            "cpu_time": 0.017346980000020266,
+            "kl_per_cpu": 24.01332433353884,
+            "kl_per_probe_rate": 0.010407360008855438,
+            "total_probes": 4000.0
+        },
+        "congestion_aware_prober": {
+            "kl_divergence": 0.03652909703374627,
+            "kl_divergence_std": 0.03515016247740946,
+            "cpu_time": 0.047547079999985725,
+            "kl_per_cpu": 0.7534586681983027,
+            "kl_per_probe_rate": 0.0009132274258436571,
+            "total_probes": 2562.78
+        },
+        "binary_rate_prober": {
+            "kl_divergence": 0.0834641439546201,
+            "kl_divergence_std": 0.06071541890208077,
+            "cpu_time": 0.012079599999997298,
+            "kl_per_cpu": 13.568170898479147,
+            "kl_per_probe_rate": 0.0020866035988655026,
+            "total_probes": 3321.5
+        }
+    },
+    {
+        "duration": 100,
+        "probes_per_second": 50,
+        "base_prober": {
+            "kl_divergence": 0.41777210304634954,
+            "kl_divergence_std": 0.00846641413706822,
+            "cpu_time": 0.021273320000013883,
+            "kl_per_cpu": 19.651438513649406,
+            "kl_per_probe_rate": 0.008355442060926992,
+            "total_probes": 5000.0
+        },
+        "congestion_aware_prober": {
+            "kl_divergence": 0.04506525902418604,
+            "kl_divergence_std": 0.03824566779532344,
+            "cpu_time": 0.058654579999997625,
+            "kl_per_cpu": 0.745283538698668,
+            "kl_per_probe_rate": 0.0009013051804837208,
+            "total_probes": 3315.2
+        },
+        "binary_rate_prober": {
+            "kl_divergence": 0.07036781261958881,
+            "kl_divergence_std": 0.05288999988693373,
+            "cpu_time": 0.012815599999980805,
+            "kl_per_cpu": 9.436853727061603,
+            "kl_per_probe_rate": 0.001407356252391776,
+            "total_probes": 3987.42
+        }
+    },
+    {
+        "duration": 100,
+        "probes_per_second": 60,
+        "base_prober": {
+            "kl_divergence": 0.418259669347102,
+            "kl_divergence_std": 0.009263276065810453,
+            "cpu_time": 0.025237979999974413,
+            "kl_per_cpu": 16.587251643923192,
+            "kl_per_probe_rate": 0.006970994489118368,
+            "total_probes": 6000.0
+        },
+        "congestion_aware_prober": {
+            "kl_divergence": 0.035202290138254544,
+            "kl_divergence_std": 0.030127884391414814,
+            "cpu_time": 0.06437498000001597,
+            "kl_per_cpu": 0.5340668526565292,
+            "kl_per_probe_rate": 0.0005867048356375758,
+            "total_probes": 3885.44
+        },
+        "binary_rate_prober": {
+            "kl_divergence": 0.084636282635475,
+            "kl_divergence_std": 0.07179467850754455,
+            "cpu_time": 0.012848879999996825,
+            "kl_per_cpu": 12.539865885998049,
+            "kl_per_probe_rate": 0.00141060471059125,
+            "total_probes": 4455.46
+        }
+    },
+    {
+        "duration": 100,
+        "probes_per_second": 70,
+        "base_prober": {
+            "kl_divergence": 0.41744507270297126,
+            "kl_divergence_std": 0.009570190905340325,
+            "cpu_time": 0.029343439999997827,
+            "kl_per_cpu": 14.238013314101622,
+            "kl_per_probe_rate": 0.0059635010386138755,
+            "total_probes": 7000.0
+        },
+        "congestion_aware_prober": {
+            "kl_divergence": 0.04381769427499366,
+            "kl_divergence_std": 0.044778403115557336,
+            "cpu_time": 0.0776539799999955,
+            "kl_per_cpu": 0.541543126338392,
+            "kl_per_probe_rate": 0.000625967061071338,
+            "total_probes": 4627.04
+        },
+        "binary_rate_prober": {
+            "kl_divergence": 0.07676433346695476,
+            "kl_divergence_std": 0.04871948068697711,
+            "cpu_time": 0.013177240000009078,
+            "kl_per_cpu": 10.711403976776326,
+            "kl_per_probe_rate": 0.0010966333352422108,
+            "total_probes": 4844.02
+        }
+    },
+    {
+        "duration": 100,
+        "probes_per_second": 80,
+        "base_prober": {
+            "kl_divergence": 0.41808444392164057,
+            "kl_divergence_std": 0.008947671449899037,
+            "cpu_time": 0.033996499999989285,
+            "kl_per_cpu": 12.326214300578501,
+            "kl_per_probe_rate": 0.005226055549020507,
+            "total_probes": 8000.0
+        },
+        "congestion_aware_prober": {
+            "kl_divergence": 0.04706460958092336,
+            "kl_divergence_std": 0.05180557582285835,
+            "cpu_time": 0.08540453999999499,
+            "kl_per_cpu": 0.5201124901512721,
+            "kl_per_probe_rate": 0.0005883076197615419,
+            "total_probes": 5252.92
+        },
+        "binary_rate_prober": {
+            "kl_divergence": 0.07412609467655745,
+            "kl_divergence_std": 0.055393602957612205,
+            "cpu_time": 0.01300666000001911,
+            "kl_per_cpu": 10.255140045161275,
+            "kl_per_probe_rate": 0.0009265761834569682,
+            "total_probes": 5257.8
+        }
+    },
+    {
+        "duration": 100,
+        "probes_per_second": 90,
+        "base_prober": {
+            "kl_divergence": 0.4166464233106242,
+            "kl_divergence_std": 0.007901169703635576,
+            "cpu_time": 0.03809430000000703,
+            "kl_per_cpu": 10.978715372247509,
+            "kl_per_probe_rate": 0.00462940470345138,
+            "total_probes": 9000.0
+        },
+        "congestion_aware_prober": {
+            "kl_divergence": 0.037875337416430094,
+            "kl_divergence_std": 0.03945680674641876,
+            "cpu_time": 0.09297553999998855,
+            "kl_per_cpu": 0.3828682519914579,
+            "kl_per_probe_rate": 0.0004208370824047788,
+            "total_probes": 5784.48
+        },
+        "binary_rate_prober": {
+            "kl_divergence": 0.07689883989653881,
+            "kl_divergence_std": 0.04965235561689206,
+            "cpu_time": 0.013761379999987184,
+            "kl_per_cpu": 10.226604120612606,
+            "kl_per_probe_rate": 0.0008544315544059867,
+            "total_probes": 5548.24
+        }
+    },
+    {
+        "duration": 100,
+        "probes_per_second": 100,
+        "base_prober": {
+            "kl_divergence": 0.41727979066313353,
+            "kl_divergence_std": 0.00797140077697566,
+            "cpu_time": 0.04120104000004176,
+            "kl_per_cpu": 10.131502092562416,
+            "kl_per_probe_rate": 0.004172797906631335,
+            "total_probes": 10000.0
+        },
+        "congestion_aware_prober": {
+            "kl_divergence": 0.033647812900116855,
+            "kl_divergence_std": 0.021921810628480944,
+            "cpu_time": 0.1004178400000137,
+            "kl_per_cpu": 0.3225259591437956,
+            "kl_per_probe_rate": 0.0003364781290011685,
+            "total_probes": 6525.64
+        },
+        "binary_rate_prober": {
+            "kl_divergence": 0.07579084592701055,
+            "kl_divergence_std": 0.05426947917119205,
+            "cpu_time": 0.013679459999984829,
+            "kl_per_cpu": 9.597682092851889,
+            "kl_per_probe_rate": 0.0007579084592701053,
+            "total_probes": 5841.18
+        }
+    }
+]

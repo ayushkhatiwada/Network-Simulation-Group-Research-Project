@@ -14,6 +14,7 @@ if parent_dir not in sys.path:
 from active_simulator_v3 import ActiveSimulator_v3
 from active_simulator_v2 import ActiveSimulator_v2
 from active_simulator_v1 import ActiveSimulator_v1
+from active_simulator_v0 import ActiveSimulator_v0
 
 from base_prober import BaseProber
 from adaptive_prober import AdaptiveProber
@@ -25,22 +26,23 @@ from probing_evaluator import ProbingEvaluator
 # python parameter_tuner.py --simulator=2 --load
 
 class ParameterTuner:
-    def __init__(self, max_departure_time=100):
+    def __init__(self, max_departure_time=5):
         self.max_departure_time = max_departure_time
         self.evaluator = ProbingEvaluator(max_departure_time)
         
     def calculate_kl_divergence(self, pred_mean, pred_std, true_mean, true_std):
         return self.evaluator.calculate_kl_divergence(pred_mean, pred_std, true_mean, true_std)
     
-    def auto_tune_parameters(self, probes_per_second=10, simulator_version=2, num_seeds=5, verbose=True):
+    def auto_tune_parameters(self, probes_per_second=100, simulator_version=2, simulation_duration=100, num_seeds=5, verbose=True):
+        """Tune parameters for a specific simulation duration and probe rate."""
         # params
-        # probes, simversion,
+        # probes, simversion, simulation_duration
         # num_seeds (sample size for how much we test)
         # verbose (print progress)
         # returns a dict with best params and all results
     
-        congestion_z_values = [1.5, 2.0, 2.5, 3.0, 3.5]
-        outlier_z_values = [2.0, 2.5, 3.0, 3.5, 4.0]
+        congestion_z_values = [0.1, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5]
+        outlier_z_values = [0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0]
         
         seeds = list(range(42, 42 + num_seeds))
         best_params = None
@@ -60,9 +62,11 @@ class ParameterTuner:
                         print(f"  Running with seed {seed}...")
                     
                     if simulator_version == 2:
-                        base_simulator = ActiveSimulator_v2(self.max_departure_time, random_seed=seed)
-                    else:
-                        base_simulator = ActiveSimulator_v1(self.max_departure_time, random_seed=seed)
+                        base_simulator = ActiveSimulator_v2(simulation_duration, random_seed=seed)
+                    elif simulator_version == 1:
+                        base_simulator = ActiveSimulator_v1(simulation_duration, random_seed=seed)
+                    elif simulator_version == 0:
+                        base_simulator = ActiveSimulator_v0(simulation_duration, random_seed=seed)
                     
                     adaptive_simulator = copy.deepcopy(base_simulator)
                     
@@ -135,12 +139,14 @@ class ParameterTuner:
                     best_params = {
                         'congestion_z': congestion_z,
                         'outlier_z': outlier_z,
-                        'avg_kl_divergence': avg_kl
+                        'avg_kl_divergence': avg_kl,
+                        'duration': simulation_duration,
+                        'probes_per_second': probes_per_second
                     }
         
         if verbose:
             print("\nParameter tuning complete!")
-            print(f"Best parameters: congestion_z={best_params['congestion_z']}, "
+            print(f"Best parameters for duration={simulation_duration}s, pps={probes_per_second}: congestion_z={best_params['congestion_z']}, "
                   f"outlier_z={best_params['outlier_z']}")
             print(f"Average KL divergence with best parameters: {best_params['avg_kl_divergence']:.6f}")
         
@@ -213,10 +219,14 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Tune parameters for AdaptiveProber')
     parser.add_argument('--simulator', type=int, default=2,
                         help='Simulator version to use (1, 2, or 3)')
-    parser.add_argument('--seeds', type=int, default=5,
+    parser.add_argument('--seeds', type=int, default=10,
                         help='Number of seeds to use for tuning')
-    parser.add_argument('--probes', type=int, default=10,
+    parser.add_argument('--probes', type=int, default=100,
                         help='Probes per second to use during tuning')
+    parser.add_argument('--duration', type=int, default=100,
+                        help='Simulation duration for tuning')
+    parser.add_argument('--all-durations', action='store_true',
+                        help='Tune parameters for all durations (10,20,...,100)')
     parser.add_argument('--load', action='store_true',
                         help='Load and display previously tuned parameters without running tuning')
     
@@ -227,47 +237,99 @@ if __name__ == "__main__":
     os.makedirs(tuned_params_dir, exist_ok=True)
     
     if args.load:
-        tuned_params_file = f'{tuned_params_dir}/best_params_v{args.simulator}.json'
-        if os.path.exists(tuned_params_file):
-            with open(tuned_params_file, 'r') as f:
-                best_params = json.load(f)
-                print("\n=== OPTIMAL PARAMETERS ===")
-                print(f"congestion_z={best_params['congestion_z']}, outlier_z={best_params['outlier_z']}")
-                print("\nTo use these parameters with AdaptiveProber:")
-                print(f"adaptive_prober = AdaptiveProber(simulator, max_probes_per_second, " 
-                      f"congestion_z={best_params['congestion_z']}, outlier_z={best_params['outlier_z']})")
-                print("\nAverage KL divergence with these parameters:", best_params['avg_kl_divergence'])
-                
-                viz_file = f'{tuned_params_dir}/parameter_tuning_v{args.simulator}.png'
-                if os.path.exists(viz_file):
-                    print(f"\nVisualization available at: {viz_file}")
+        if args.all_durations:
+            durations = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
+            for duration in durations:
+                tuned_params_file = f'{tuned_params_dir}/best_params_v{args.simulator}_d{duration}.json'
+                if os.path.exists(tuned_params_file):
+                    with open(tuned_params_file, 'r') as f:
+                        best_params = json.load(f)
+                        print(f"\n=== OPTIMAL PARAMETERS FOR DURATION={duration}s ===")
+                        print(f"congestion_z={best_params['congestion_z']}, outlier_z={best_params['outlier_z']}")
+                        print(f"Average KL divergence: {best_params['avg_kl_divergence']}")
+                else:
+                    print(f"No tuned parameters found for simulator version {args.simulator}, duration {duration}s")
         else:
-            print(f"No tuned parameters found for simulator version {args.simulator}")
-            print(f"Run without --load to tune parameters first")
+            tuned_params_file = f'{tuned_params_dir}/best_params_v{args.simulator}_d{args.duration}.json'
+            if os.path.exists(tuned_params_file):
+                with open(tuned_params_file, 'r') as f:
+                    best_params = json.load(f)
+                    print("\n=== OPTIMAL PARAMETERS ===")
+                    print(f"For duration={best_params['duration']}s, probes_per_second={best_params['probes_per_second']}")
+                    print(f"congestion_z={best_params['congestion_z']}, outlier_z={best_params['outlier_z']}")
+                    print("\nTo use these parameters with AdaptiveProber:")
+                    print(f"adaptive_prober = AdaptiveProber(simulator, max_probes_per_second, " 
+                          f"congestion_z={best_params['congestion_z']}, outlier_z={best_params['outlier_z']})")
+                    print("\nAverage KL divergence with these parameters:", best_params['avg_kl_divergence'])
+                    
+                    viz_file = f'{tuned_params_dir}/parameter_tuning_v{args.simulator}_d{args.duration}.png'
+                    if os.path.exists(viz_file):
+                        print(f"\nVisualization available at: {viz_file}")
+            else:
+                print(f"No tuned parameters found for simulator version {args.simulator}, duration {args.duration}s")
+                print(f"Run without --load to tune parameters first")
     else:
         # Run the parameter tuning
-        print(f"Auto-tuning parameters with {args.seeds} seeds...")
-        tuning_results = tuner.auto_tune_parameters(
-            probes_per_second=args.probes,
-            simulator_version=args.simulator,
-            num_seeds=args.seeds
-        )
-        
-        best_params = tuning_results['best_params']
-        with open(f'{tuned_params_dir}/best_params_v{args.simulator}.json', 'w') as f:
-            json.dump(best_params, f, indent=2)
-        
-        # Visualize tuning results
-        tuner.visualize_parameter_tuning(
-            tuning_results, 
-            plot_filename=f'{tuned_params_dir}/parameter_tuning_v{args.simulator}.png'
-        )
-        
-        print(f"\nBest parameters saved to {tuned_params_dir}/best_params_v{args.simulator}.json")
-        
-        # Print in a copy-paste friendly format
-        print("\n=== OPTIMAL PARAMETERS ===")
-        print(f"congestion_z={best_params['congestion_z']}, outlier_z={best_params['outlier_z']}")
-        print("\nTo use these parameters with AdaptiveProber:")
-        print(f"adaptive_prober = AdaptiveProber(simulator, max_probes_per_second, " 
-              f"congestion_z={best_params['congestion_z']}, outlier_z={best_params['outlier_z']})") 
+        if args.all_durations:
+            durations = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
+            all_best_params = {}
+            
+            for duration in durations:
+                print(f"\n\n==== TUNING FOR DURATION {duration}s ====\n")
+                tuning_results = tuner.auto_tune_parameters(
+                    probes_per_second=args.probes,
+                    simulator_version=args.simulator,
+                    simulation_duration=duration,
+                    num_seeds=args.seeds
+                )
+                
+                best_params = tuning_results['best_params']
+                all_best_params[duration] = best_params
+                
+                # Save individual parameters
+                with open(f'{tuned_params_dir}/best_params_v{args.simulator}_d{duration}.json', 'w') as f:
+                    json.dump(best_params, f, indent=2)
+                
+                # Visualize tuning results
+                tuner.visualize_parameter_tuning(
+                    tuning_results, 
+                    plot_filename=f'{tuned_params_dir}/parameter_tuning_v{args.simulator}_d{duration}.png'
+                )
+            
+            # Save a summary file with all parameters
+            with open(f'{tuned_params_dir}/all_best_params_v{args.simulator}.json', 'w') as f:
+                json.dump(all_best_params, f, indent=2)
+                
+            print("\n\n==== ALL TUNING COMPLETE ====")
+            print(f"All parameters saved to {tuned_params_dir}/all_best_params_v{args.simulator}.json")
+            print("\nOptimal parameters summary:")
+            for duration, params in all_best_params.items():
+                print(f"Duration {duration}s: congestion_z={params['congestion_z']}, outlier_z={params['outlier_z']}, KL={params['avg_kl_divergence']:.6f}")
+        else:
+            # Run for single duration
+            print(f"Auto-tuning parameters with {args.seeds} seeds for duration={args.duration}s...")
+            tuning_results = tuner.auto_tune_parameters(
+                probes_per_second=args.probes,
+                simulator_version=args.simulator,
+                simulation_duration=args.duration,
+                num_seeds=args.seeds
+            )
+            
+            best_params = tuning_results['best_params']
+            with open(f'{tuned_params_dir}/best_params_v{args.simulator}_d{args.duration}.json', 'w') as f:
+                json.dump(best_params, f, indent=2)
+            
+            # Visualize tuning results
+            tuner.visualize_parameter_tuning(
+                tuning_results, 
+                plot_filename=f'{tuned_params_dir}/parameter_tuning_v{args.simulator}_d{args.duration}.png'
+            )
+            
+            print(f"\nBest parameters saved to {tuned_params_dir}/best_params_v{args.simulator}_d{args.duration}.json")
+            
+            # Print in a copy-paste friendly format
+            print("\n=== OPTIMAL PARAMETERS ===")
+            print(f"congestion_z={best_params['congestion_z']}, outlier_z={best_params['outlier_z']}")
+            print("\nTo use these parameters with AdaptiveProber:")
+            print(f"adaptive_prober = AdaptiveProber(simulator, max_probes_per_second, " 
+                  f"congestion_z={best_params['congestion_z']}, outlier_z={best_params['outlier_z']})")

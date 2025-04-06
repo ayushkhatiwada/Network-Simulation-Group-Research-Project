@@ -73,7 +73,8 @@ class BaseProber:
             "probes_sent": sum(m[3] for m in self.metrics_per_timeslot),
             "cpu_times": cpu_times,
             "probes_per_timeslot": probes_per_ts,
-            "metrics_per_timeslot": self.metrics_per_timeslot
+            "metrics_per_timeslot": self.metrics_per_timeslot,
+            "total_probes": sum(m[3] for m in self.metrics_per_timeslot) 
         }
     
   
