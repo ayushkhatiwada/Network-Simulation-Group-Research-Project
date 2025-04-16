@@ -61,12 +61,14 @@ class ParameterTuner:
                     if verbose:
                         print(f"  Running with seed {seed}...")
                     
-                    if simulator_version == 2:
-                        base_simulator = ActiveSimulator_v2(simulation_duration, random_seed=seed)
+                    if simulator_version == 3:
+                        base_simulator = ActiveSimulator_v3(simulation_duration=simulation_duration, random_seed=seed)
+                    elif simulator_version == 2:
+                        base_simulator = ActiveSimulator_v2(simulation_duration=simulation_duration, random_seed=seed)
                     elif simulator_version == 1:
-                        base_simulator = ActiveSimulator_v1(simulation_duration, random_seed=seed)
-                    elif simulator_version == 0:
-                        base_simulator = ActiveSimulator_v0(simulation_duration, random_seed=seed)
+                        base_simulator = ActiveSimulator_v1(simulation_duration=simulation_duration, random_seed=seed)
+                    else: # Default to v0
+                        base_simulator = ActiveSimulator_v0(simulation_duration=simulation_duration, random_seed=seed)
                     
                     adaptive_simulator = copy.deepcopy(base_simulator)
                     
@@ -91,24 +93,37 @@ class ParameterTuner:
                     adaptive_prober.probe()
                     
                     # Get ground truth and metrics
-                    ground_truth_params = base_simulator.network.get_single_edge_distribution_parameters(
-                        base_simulator.network.SOURCE, 
-                        base_simulator.network.DESTINATION
-                    )
+                    ground_truth_params_list = base_simulator.network.get_distribution_parameters()
+                    if ground_truth_params_list:
+                        ground_truth_dict = ground_truth_params_list[0][2] # Extract the dict
+                        gt_mean = ground_truth_dict.get('mean', 0) # Use .get for safety
+                        gt_std = ground_truth_dict.get('std', 1)   # Use .get for safety
+                        if verbose:
+                             print(f"    Ground truth parameters extracted: mean={gt_mean:.3f}, std={gt_std:.3f}")
+                    else:
+                        # Handle case where the network might not have the edge somehow
+                        print(f"    Warning: Could not retrieve ground truth params for seed {seed}. Using defaults.")
+                        gt_mean = 0
+                        gt_std = 1 # Fallback defaults
                     
-                    base_metrics = base_prober.get_metrics()
                     adaptive_metrics = adaptive_prober.get_metrics()
                     
-                    # Use final estimates
-                    final_adaptive_mean = adaptive_metrics['metrics_per_timeslot'][-1][1]
-                    final_adaptive_std = adaptive_metrics['metrics_per_timeslot'][-1][2]
+                    # Use final estimates (handle potential empty metrics)
+                    if adaptive_metrics['metrics_per_timeslot']:
+                        final_adaptive_mean = adaptive_metrics['metrics_per_timeslot'][-1][1]
+                        final_adaptive_std = adaptive_metrics['metrics_per_timeslot'][-1][2]
+                    else:
+                        # Handle case where adaptive prober produced no metrics
+                        print(f"    Warning: Adaptive prober produced no metrics for seed {seed}. Using default estimates.")
+                        final_adaptive_mean = 0.0
+                        final_adaptive_std = 1.0 # Avoid zero std
                     
-                    # Calculate KL divergence
+                    # Calculate KL divergence using extracted gt_mean and gt_std
                     adaptive_kl = self.calculate_kl_divergence(
                         final_adaptive_mean, 
                         final_adaptive_std, 
-                        ground_truth_params['mean'], 
-                        ground_truth_params['std']
+                        gt_mean, 
+                        gt_std
                     )
                     
                     param_results.append({
@@ -116,21 +131,23 @@ class ParameterTuner:
                         'kl_divergence': adaptive_kl,
                         'final_mean': final_adaptive_mean,
                         'final_std': final_adaptive_std,
-                        'true_mean': ground_truth_params['mean'],
-                        'true_std': ground_truth_params['std']
+                        'true_mean': gt_mean, # Store extracted ground truth
+                        'true_std': gt_std    # Store extracted ground truth
                     })
+                    if verbose:
+                        print(f"    Seed {seed} KL: {adaptive_kl:.6f}")
                 
                 # Average KL divergence across all seeds
                 avg_kl = np.mean([r['kl_divergence'] for r in param_results])
                 
                 if verbose:
-                    print(f"  Average KL divergence: {avg_kl:.6f}")
+                    print(f"  Average KL for ({congestion_z}, {outlier_z}): {avg_kl:.6f}")
                 
                 # Store results for this parameter combination
                 param_key = (congestion_z, outlier_z)
                 results[param_key] = {
                     'avg_kl_divergence': avg_kl,
-                    'individual_results': param_results
+                    'details': param_results
                 }
                 
                 # Update best parameters if this is better
@@ -140,8 +157,10 @@ class ParameterTuner:
                         'congestion_z': congestion_z,
                         'outlier_z': outlier_z,
                         'avg_kl_divergence': avg_kl,
-                        'duration': simulation_duration,
-                        'probes_per_second': probes_per_second
+                        'simulator_version': simulator_version,
+                        'simulation_duration': simulation_duration,
+                        'probes_per_second': probes_per_second,
+                        'num_seeds': num_seeds
                     }
         
         if verbose:
@@ -255,7 +274,7 @@ if __name__ == "__main__":
                 with open(tuned_params_file, 'r') as f:
                     best_params = json.load(f)
                     print("\n=== OPTIMAL PARAMETERS ===")
-                    print(f"For duration={best_params['duration']}s, probes_per_second={best_params['probes_per_second']}")
+                    print(f"For duration={best_params['simulation_duration']}s, probes_per_second={best_params['probes_per_second']}")
                     print(f"congestion_z={best_params['congestion_z']}, outlier_z={best_params['outlier_z']}")
                     print("\nTo use these parameters with AdaptiveProber:")
                     print(f"adaptive_prober = AdaptiveProber(simulator, max_probes_per_second, " 
